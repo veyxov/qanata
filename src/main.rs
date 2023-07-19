@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use simplelog::*;
 use std::str;
 
-use std::io::{stdin, Read, Write};
+use std::io::Write;
 use std::net::{SocketAddr, TcpStream};
 use std::process::{Command, Stdio};
 use std::str::FromStr;
@@ -42,9 +42,8 @@ fn main() {
     .expect("connect to kanata");
     log::info!("successfully connected");
     let writer_stream = kanata_conn.try_clone().expect("clone writer");
-    std::thread::spawn(move || write_to_kanata(writer_stream));
 
-    read_from_kanata();
+    read_from_kanata(writer_stream);
 }
 
 fn init_logger(args: &Args) {
@@ -88,26 +87,7 @@ impl FromStr for ServerMessage {
     }
 }
 
-fn write_to_kanata(mut s: TcpStream) {
-    log::info!("writer starting");
-    log::info!("writer: type layer name then press enter to send a change layer request to kanata");
-    let mut layer = String::new();
-    loop {
-        stdin().read_line(&mut layer).expect("stdin is readable");
-        let new = layer.trim_end().to_owned();
-        log::info!("writer: telling kanata to change layer to \"{new}\"");
-        let msg =
-            serde_json::to_string(&ClientMessage::ChangeLayer { new }).expect("deserializable");
-        let expected_wsz = msg.len();
-        let wsz = s.write(msg.as_bytes()).expect("stream writable");
-        if wsz != expected_wsz {
-            panic!("failed to write entire message {wsz} {expected_wsz}");
-        }
-        layer.clear();
-    }
-}
-
-fn read_from_kanata() {
+fn read_from_kanata(mut s: TcpStream) {
     loop {
         let result = get_sway_wininfo();
         let deserialized = serde_json::from_str::<Vec<WinInfo>>(&result).unwrap();
@@ -115,11 +95,25 @@ fn read_from_kanata() {
         // TODO: Only get focused window to remove the for loop
         for win in deserialized.iter() {
             if win.is_focused {
-                log::error!("focused window: {}", win.name);
+                write_to_kanata(win, &mut s);
             }
         }
 
         std::thread::sleep(Duration::from_millis(500));
+    }
+}
+
+fn write_to_kanata(win: &WinInfo, s: &mut TcpStream) {
+    log::error!("focused window: {}", win.name);
+
+    let new = win.name.clone();
+    log::info!("writer: telling kanata to change layer to \"{new}\"");
+    let msg = serde_json::to_string(&ClientMessage::ChangeLayer { new })
+        .expect("deserializable");
+    let expected_wsz = msg.len();
+    let wsz = s.write(msg.as_bytes()).expect("stream writable");
+    if wsz != expected_wsz {
+        panic!("failed to write entire message {wsz} {expected_wsz}");
     }
 }
 
