@@ -1,13 +1,19 @@
 use clap::Parser;
-use std::str;
 use serde::{Deserialize, Serialize};
 use simplelog::*;
+use std::str;
 
 use std::io::{stdin, Read, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::process::{Command, Stdio};
 use std::str::FromStr;
 use std::time::Duration;
+
+#[derive(Debug, Serialize, Deserialize)]
+struct WinInfo {
+    name: String,
+    is_focused: bool,
+}
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -115,15 +121,13 @@ fn read_from_kanata(mut s: TcpStream) {
         }
 
         let result = get_sway_wininfo();
-
-        log::info!(
-            "window info: {}",
-            result
-        )
+        let deserialized = serde_json::from_str::<Vec<WinInfo>>(&result).unwrap();
+        
+        log::info!("window info: {}", deserialized[0].name)
     }
 }
 
-fn get_sway_wininfo() -> &str {
+fn get_sway_wininfo() -> String {
     let output = Command::new("swaymsg")
         .arg("--raw")
         .arg("-t")
@@ -132,7 +136,7 @@ fn get_sway_wininfo() -> &str {
         .spawn()
         .expect("Failed to execute command");
 
-    let jq_command = ".nodes[].nodes[].nodes[] | {name: .name, is_focused: .focused}";
+    let jq_command = "[.nodes[].nodes[].nodes[] | {name: .name, is_focused: .focused}]";
 
     let jq_output = Command::new("jq")
         .arg(jq_command)
@@ -144,5 +148,5 @@ fn get_sway_wininfo() -> &str {
 
     let output = jq_output.wait_with_output().unwrap();
     let result = str::from_utf8(&output.stdout).unwrap();
-    result
+    result.to_owned()
 }
