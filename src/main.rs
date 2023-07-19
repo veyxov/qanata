@@ -42,9 +42,9 @@ fn main() {
     .expect("connect to kanata");
     log::info!("successfully connected");
     let writer_stream = kanata_conn.try_clone().expect("clone writer");
-    let reader_stream = kanata_conn;
     std::thread::spawn(move || write_to_kanata(writer_stream));
-    read_from_kanata(reader_stream);
+
+    read_from_kanata();
 }
 
 fn init_logger(args: &Args) {
@@ -107,23 +107,19 @@ fn write_to_kanata(mut s: TcpStream) {
     }
 }
 
-fn read_from_kanata(mut s: TcpStream) {
-    log::info!("reader starting");
-    let mut buf = vec![0; 256];
+fn read_from_kanata() {
     loop {
-        let sz = s.read(&mut buf).expect("stream readable");
-        let msg = String::from_utf8_lossy(&buf[..sz]);
-        let parsed_msg = ServerMessage::from_str(&msg).expect("kanata sends valid message");
-        match parsed_msg {
-            ServerMessage::LayerChange { new } => {
-                log::info!("reader: kanata changed layers to \"{new}\"");
+        let result = get_sway_wininfo();
+        let deserialized = serde_json::from_str::<Vec<WinInfo>>(&result).unwrap();
+
+        // TODO: Only get focused window to remove the for loop
+        for win in deserialized.iter() {
+            if win.is_focused {
+                log::error!("focused window: {}", win.name);
             }
         }
 
-        let result = get_sway_wininfo();
-        let deserialized = serde_json::from_str::<Vec<WinInfo>>(&result).unwrap();
-        
-        log::info!("window info: {}", deserialized[0].name)
+        std::thread::sleep(Duration::from_millis(500));
     }
 }
 
