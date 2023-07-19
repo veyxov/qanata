@@ -1,9 +1,11 @@
 use clap::Parser;
+use std::str;
 use serde::{Deserialize, Serialize};
 use simplelog::*;
 
 use std::io::{stdin, Read, Write};
 use std::net::{SocketAddr, TcpStream};
+use std::process::{Command, Stdio};
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -33,9 +35,7 @@ fn main() {
     )
     .expect("connect to kanata");
     log::info!("successfully connected");
-    let writer_stream = kanata_conn
-        .try_clone()
-        .expect("clone writer");
+    let writer_stream = kanata_conn.try_clone().expect("clone writer");
     let reader_stream = kanata_conn;
     std::thread::spawn(move || write_to_kanata(writer_stream));
     read_from_kanata(reader_stream);
@@ -113,5 +113,36 @@ fn read_from_kanata(mut s: TcpStream) {
                 log::info!("reader: kanata changed layers to \"{new}\"");
             }
         }
+
+        let result = get_sway_wininfo();
+
+        log::info!(
+            "window info: {}",
+            result
+        )
     }
+}
+
+fn get_sway_wininfo() -> &str {
+    let output = Command::new("swaymsg")
+        .arg("--raw")
+        .arg("-t")
+        .arg("get_tree")
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("Failed to execute command");
+
+    let jq_command = ".nodes[].nodes[].nodes[] | {name: .name, is_focused: .focused}";
+
+    let jq_output = Command::new("jq")
+        .arg(jq_command)
+        .arg("--raw-output")
+        .stdin(Stdio::from(output.stdout.unwrap())) // Pipe through.
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("Failed to execute jq command");
+
+    let output = jq_output.wait_with_output().unwrap();
+    let result = str::from_utf8(&output.stdout).unwrap();
+    result
 }
