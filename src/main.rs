@@ -95,7 +95,10 @@ fn read_from_kanata(mut s: TcpStream) {
         // TODO: Only get focused window to remove the for loop
         for win in deserialized.iter() {
             if win.is_focused {
-                write_to_kanata(win, &mut s);
+                // PERF: Optimize
+                let layer = win.name.clone().trim().to_lowercase().to_owned();
+                
+                write_to_kanata(layer, &mut s);
             }
         }
 
@@ -103,10 +106,9 @@ fn read_from_kanata(mut s: TcpStream) {
     }
 }
 
-fn write_to_kanata(win: &WinInfo, s: &mut TcpStream) {
-    log::error!("focused window: {}", win.name);
+fn write_to_kanata(new: String, s: &mut TcpStream) {
+    //log::error!("focused window: {}", win.name);
 
-    let new = win.name.clone();
     log::info!("writer: telling kanata to change layer to \"{new}\"");
     let msg = serde_json::to_string(&ClientMessage::ChangeLayer { new })
         .expect("deserializable");
