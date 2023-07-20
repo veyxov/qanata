@@ -71,7 +71,7 @@ fn main() {
     let mut sway = Sway::new();
     sway.connect();
 
-    // Async channell cammunication
+    // Async cross-channel cammunication
     let (sender, receiver) = unbounded::<String>();
     thread::spawn(move || read_from_kanata(reader_stream, sender));
 
@@ -128,19 +128,23 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
         // Returns ok when there is a layer change
         // Error if nothing changed
         if let Ok(new_layer) = layer_changed {
-            log::warn!("Layer change: {}", new_layer);
+            log::warn!("Changing current layer: {} -> {}", cur_layer, new_layer);
             cur_layer = new_layer;
-        }
-
-        // If not in the main layer, don't change
-        if cur_layer != "main" {
-            log::warn!("Not in main layer, skipping");
-            continue;
         }
 
         let cur_win_name = sway.current_application().unwrap();
 
-        let should_change = should_change_layer(cur_win_name.clone(), &receiver);
+        // If not in the main layer, don't change
+        // NOTE: This is specific to my use case
+        // TODO: Add black list, list of applications
+        // or layers that should not react to application changes
+        log::error!("Current layer {}", cur_layer);
+        if cur_layer == "russ" {
+            log::warn!("Not in main layer, skipping");
+            continue;
+        }
+
+        let should_change = should_change_layer(cur_win_name.clone());
         if should_change {
             log::warn!("can change layer to {}", cur_win_name);
             write_to_kanata(cur_win_name, &mut s);
@@ -159,7 +163,7 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
     }
 }
 
-fn should_change_layer(cur_win_name: String, receiver: &Receiver<String>) -> bool {
+fn should_change_layer(cur_win_name: String) -> bool {
     // PERF: Early exit, when found or cache on startup, which creates reload problems
     let file_names: Vec<String> = glob("/home/iz/.config/keyboard/apps/*")
         .expect("Failed to read glob pattern")
