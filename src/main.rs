@@ -1,5 +1,5 @@
 use clap::Parser;
-use crossbeam::channel::{unbounded, Sender, Receiver};
+use crossbeam::channel::{unbounded, Receiver, Sender};
 use glob::glob;
 use serde::{Deserialize, Serialize};
 use simplelog::*;
@@ -120,7 +120,24 @@ impl FromStr for ServerMessage {
 }
 
 fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
+    let mut cur_layer = String::from("main");
+
     loop {
+        let layer_changed = receiver.recv();
+
+        // Returns ok when there is a layer change
+        // Error if nothing changed
+        if let Ok(new_layer) = layer_changed {
+            log::warn!("Layer change: {}", new_layer);
+            cur_layer = new_layer;
+        }
+
+        // If not in the main layer, don't change
+        if cur_layer != "main" {
+            log::warn!("Not in main layer, skipping");
+            continue;
+        }
+
         let cur_win_name = sway.current_application().unwrap();
 
         let should_change = should_change_layer(cur_win_name.clone(), &receiver);
@@ -143,14 +160,6 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
 }
 
 fn should_change_layer(cur_win_name: String, receiver: &Receiver<String>) -> bool {
-
-    let layer_changed =  receiver.recv();
-
-    // Returns ok when there is a layer change
-    // Error if nothing changed
-    if let Ok(new_layer) = layer_changed {
-        log::warn!("Layer change: {}", new_layer);
-    }
     // PERF: Early exit, when found or cache on startup, which creates reload problems
     let file_names: Vec<String> = glob("/home/iz/.config/keyboard/apps/*")
         .expect("Failed to read glob pattern")
