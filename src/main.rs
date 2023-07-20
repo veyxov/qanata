@@ -128,7 +128,7 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
             log::warn!("can change layer to {}", cur_win_name);
             write_to_kanata(cur_win_name, &mut s);
         } else {
-            log::error!(
+            log::warn!(
                 "app specific layer for {} not found, fallback to default",
                 cur_win_name
             );
@@ -144,7 +144,13 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
 
 fn should_change_layer(cur_win_name: String, receiver: &Receiver<String>) -> bool {
 
-    log::error!("UUUUUUU: {}", receiver.recv().unwrap());
+    let layer_changed =  receiver.recv();
+
+    // Returns ok when there is a layer change
+    // Error if nothing changed
+    if let Ok(new_layer) = layer_changed {
+        log::warn!("Layer change: {}", new_layer);
+    }
     // PERF: Early exit, when found or cache on startup, which creates reload problems
     let file_names: Vec<String> = glob("/home/iz/.config/keyboard/apps/*")
         .expect("Failed to read glob pattern")
@@ -162,8 +168,6 @@ fn should_change_layer(cur_win_name: String, receiver: &Receiver<String>) -> boo
 }
 
 fn write_to_kanata(new: String, s: &mut TcpStream) {
-    //log::error!("focused window: {}", win.name);
-
     log::info!("writer: telling kanata to change layer to \"{new}\"");
     let msg = serde_json::to_string(&ClientMessage::ChangeLayer { new }).expect("deserializable");
     let expected_wsz = msg.len();
@@ -173,10 +177,12 @@ fn write_to_kanata(new: String, s: &mut TcpStream) {
     }
 }
 
-fn read_from_kanata(mut s: TcpStream, sender: Sender<String>) -> String {
+fn read_from_kanata(mut s: TcpStream, sender: Sender<String>) {
     log::info!("reader starting");
     let mut buf = vec![0; 256];
     loop {
+        log::info!("reader: waiting for message from kanata");
+
         let sz = s.read(&mut buf).expect("stream readable");
         let msg = String::from_utf8_lossy(&buf[..sz]);
         let parsed_msg = ServerMessage::from_str(&msg).expect("kanata sends valid message");
@@ -184,7 +190,6 @@ fn read_from_kanata(mut s: TcpStream, sender: Sender<String>) -> String {
             ServerMessage::LayerChange { new } => {
                 log::info!("reader: kanata changed layers to \"{}\"", new);
                 sender.send(new.clone()).unwrap();
-                return new
             }
         }
     }
