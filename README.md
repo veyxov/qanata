@@ -23,6 +23,8 @@ NOTE: If it can't find the corresponding file in `/apps` it fallbacks to the def
 - Create a file and include it in your kanata configuration
     - NOTE: The name of the file should match what sway returns
 
+## Check out my [kanata config](https://github.com/veyxov/dots/tree/main/.config/keyboard) for reference 💡
+
 ## How to run 🏃
 ```sh
 git clone https://github.com/veyxov/qanata
