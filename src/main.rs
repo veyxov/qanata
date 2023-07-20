@@ -1,12 +1,13 @@
 use clap::Parser;
+use crossbeam::channel::{unbounded, Receiver, Sender};
 use glob::glob;
 use serde::{Deserialize, Serialize};
 use simplelog::*;
 use std::fs::read_dir;
 use std::os::unix::prelude::OsStrExt;
-use std::str;
+use std::{str, thread};
 
-use std::io::Write;
+use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::str::FromStr;
 use std::time::Duration;
@@ -65,10 +66,16 @@ fn main() {
     .expect("connect to kanata");
     log::info!("successfully connected");
     let writer_stream = kanata_conn.try_clone().expect("clone writer");
+    let reader_stream = kanata_conn;
 
     let mut sway = Sway::new();
     sway.connect();
-    main_loop(writer_stream, sway);
+
+    // Async cross-channel cammunication
+    let (sender, receiver) = unbounded::<String>();
+    thread::spawn(move || read_from_kanata(reader_stream, sender));
+
+    main_loop(writer_stream, sway, receiver);
 }
 
 fn init_logger(args: &Args) {
@@ -112,16 +119,40 @@ impl FromStr for ServerMessage {
     }
 }
 
-fn main_loop(mut s: TcpStream, mut sway: Sway) {
+fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
+    let mut cur_layer = String::from("main");
+
     loop {
+        let layer_changed = receiver.recv();
+
+        // Returns ok when there is a layer change
+        // Error if nothing changed
+        if let Ok(new_layer) = layer_changed {
+            log::warn!("Changing current layer: {} -> {}", cur_layer, new_layer);
+            cur_layer = new_layer;
+        }
+
         let cur_win_name = sway.current_application().unwrap();
+
+        // If not in the main layer, don't change
+        // NOTE: This is specific to my use case
+        // TODO: Add black list, list of applications
+        // or layers that should not react to application changes
+        log::error!("Current layer {}", cur_layer);
+        if cur_layer == "russ" {
+            log::warn!("Not in main layer, skipping");
+            continue;
+        }
 
         let should_change = should_change_layer(cur_win_name.clone());
         if should_change {
             log::warn!("can change layer to {}", cur_win_name);
             write_to_kanata(cur_win_name, &mut s);
         } else {
-            log::error!("app specific layer for {} not found, fallback to default", cur_win_name);
+            log::warn!(
+                "app specific layer for {} not found, fallback to default",
+                cur_win_name
+            );
 
             // TODO: Extract to configuration
             let default_layer = String::from("main");
@@ -139,12 +170,7 @@ fn should_change_layer(cur_win_name: String) -> bool {
         .into_iter()
         .map(|e| {
             //files.push(e.unwrap().display());
-            let val = e.unwrap()
-                .file_name()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .to_owned();
+            let val = e.unwrap().file_name().unwrap().to_str().unwrap().to_owned();
 
             log::warn!("File found: {}", val);
             val
@@ -155,13 +181,29 @@ fn should_change_layer(cur_win_name: String) -> bool {
 }
 
 fn write_to_kanata(new: String, s: &mut TcpStream) {
-    //log::error!("focused window: {}", win.name);
-
     log::info!("writer: telling kanata to change layer to \"{new}\"");
     let msg = serde_json::to_string(&ClientMessage::ChangeLayer { new }).expect("deserializable");
     let expected_wsz = msg.len();
     let wsz = s.write(msg.as_bytes()).expect("stream writable");
     if wsz != expected_wsz {
         panic!("failed to write entire message {wsz} {expected_wsz}");
+    }
+}
+
+fn read_from_kanata(mut s: TcpStream, sender: Sender<String>) {
+    log::info!("reader starting");
+    let mut buf = vec![0; 256];
+    loop {
+        log::info!("reader: waiting for message from kanata");
+
+        let sz = s.read(&mut buf).expect("stream readable");
+        let msg = String::from_utf8_lossy(&buf[..sz]);
+        let parsed_msg = ServerMessage::from_str(&msg).expect("kanata sends valid message");
+        match parsed_msg {
+            ServerMessage::LayerChange { new } => {
+                log::info!("reader: kanata changed layers to \"{}\"", new);
+                sender.send(new.clone()).unwrap();
+            }
+        }
     }
 }
