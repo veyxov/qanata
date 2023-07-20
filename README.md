@@ -12,8 +12,15 @@
 - [ ] Don't rely on swaymsg, make universal
     - [x] Now using swayipc
     - [ ] Make it work on other than sway?
+- [ ] Whitelist/blacklist
 
 ## How it works
+1. You have a `main` layer, this will be used by default.
+2. You have a `~/.config/keyboard/apps/org.telegram.desktop` layer.
+    When `telegram` is focused it sends the window name (`org.telegram.desktop` in this case) to kanata.
+    Kanata switches to this layer.
+NOTE: If it can't find the corresponding file in `/apps` it fallbacks to the default layer (`main`)
+
 - Create a file and include it in your kanata configuration
     - NOTE: The name of the file should match what sway returns
 
