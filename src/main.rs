@@ -117,7 +117,12 @@ fn main_loop(mut s: TcpStream, mut sway: Sway) {
         let cur_win_name = sway.current_application().unwrap();
 
         let should_change = should_change_layer(cur_win_name.clone());
-        write_to_kanata(cur_win_name, &mut s);
+        if should_change {
+            log::warn!("can change layer to {}", cur_win_name);
+            write_to_kanata(cur_win_name, &mut s);
+        } else {
+            log::error!("app specific layer for {} not found, fallback to default", cur_win_name);
+        }
 
         std::thread::sleep(Duration::from_millis(1500));
     }
@@ -141,7 +146,7 @@ fn should_change_layer(cur_win_name: String) -> bool {
         })
         .collect();
 
-    return true;
+    return file_names.contains(&cur_win_name);
 }
 
 fn write_to_kanata(new: String, s: &mut TcpStream) {
