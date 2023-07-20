@@ -1,10 +1,11 @@
 use clap::Parser;
+use crossbeam::channel::{unbounded, Sender, Receiver};
 use glob::glob;
 use serde::{Deserialize, Serialize};
 use simplelog::*;
 use std::fs::read_dir;
 use std::os::unix::prelude::OsStrExt;
-use std::str;
+use std::{str, thread};
 
 use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpStream};
@@ -65,10 +66,16 @@ fn main() {
     .expect("connect to kanata");
     log::info!("successfully connected");
     let writer_stream = kanata_conn.try_clone().expect("clone writer");
+    let reader_stream = kanata_conn;
 
     let mut sway = Sway::new();
     sway.connect();
-    main_loop(writer_stream, sway);
+
+    // Async channell cammunication
+    let (sender, receiver) = unbounded::<String>();
+    thread::spawn(move || read_from_kanata(reader_stream, sender));
+
+    main_loop(writer_stream, sway, receiver);
 }
 
 fn init_logger(args: &Args) {
@@ -112,11 +119,11 @@ impl FromStr for ServerMessage {
     }
 }
 
-fn main_loop(mut s: TcpStream, mut sway: Sway) {
+fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
     loop {
         let cur_win_name = sway.current_application().unwrap();
 
-        let should_change = should_change_layer(cur_win_name.clone());
+        let should_change = should_change_layer(cur_win_name.clone(), &receiver);
         if should_change {
             log::warn!("can change layer to {}", cur_win_name);
             write_to_kanata(cur_win_name, &mut s);
@@ -135,7 +142,9 @@ fn main_loop(mut s: TcpStream, mut sway: Sway) {
     }
 }
 
-fn should_change_layer(cur_win_name: String) -> bool {
+fn should_change_layer(cur_win_name: String, receiver: &Receiver<String>) -> bool {
+
+    log::error!("UUUUUUU: {}", receiver.recv().unwrap());
     // PERF: Early exit, when found or cache on startup, which creates reload problems
     let file_names: Vec<String> = glob("/home/iz/.config/keyboard/apps/*")
         .expect("Failed to read glob pattern")
@@ -164,7 +173,7 @@ fn write_to_kanata(new: String, s: &mut TcpStream) {
     }
 }
 
-fn read_from_kanata(mut s: TcpStream) -> String {
+fn read_from_kanata(mut s: TcpStream, sender: Sender<String>) -> String {
     log::info!("reader starting");
     let mut buf = vec![0; 256];
     loop {
@@ -174,6 +183,7 @@ fn read_from_kanata(mut s: TcpStream) -> String {
         match parsed_msg {
             ServerMessage::LayerChange { new } => {
                 log::info!("reader: kanata changed layers to \"{}\"", new);
+                sender.send(new.clone()).unwrap();
                 return new
             }
         }
