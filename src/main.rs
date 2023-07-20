@@ -133,7 +133,7 @@ fn main_loop(mut s: TcpStream, mut sway: Sway) {
 }
 
 fn should_change_layer(cur_win_name: String) -> bool {
-    // PERF: Early exit, when found
+    // PERF: Early exit, when found or cache on startup, which creates reload problems
     let file_names: Vec<String> = glob("/home/iz/.config/keyboard/apps/*")
         .expect("Failed to read glob pattern")
         .into_iter()
