@@ -97,7 +97,7 @@ fn read_from_kanata(mut s: TcpStream) {
             if win.is_focused {
                 // PERF: Optimize
                 let layer = win.name.clone().trim().to_lowercase().to_owned();
-                
+
                 write_to_kanata(layer, &mut s);
             }
         }
@@ -110,8 +110,7 @@ fn write_to_kanata(new: String, s: &mut TcpStream) {
     //log::error!("focused window: {}", win.name);
 
     log::info!("writer: telling kanata to change layer to \"{new}\"");
-    let msg = serde_json::to_string(&ClientMessage::ChangeLayer { new })
-        .expect("deserializable");
+    let msg = serde_json::to_string(&ClientMessage::ChangeLayer { new }).expect("deserializable");
     let expected_wsz = msg.len();
     let wsz = s.write(msg.as_bytes()).expect("stream writable");
     if wsz != expected_wsz {
