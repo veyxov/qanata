@@ -8,4 +8,5 @@
 
 - [ ] Refactor the code
 - [ ] Don't rely on swaymsg, make universal
+    - [x] Now using swayipc
 
