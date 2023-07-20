@@ -114,8 +114,10 @@ fn main() {
     log::info!("successfully connected");
     let writer_stream = kanata_conn.try_clone().expect("clone writer");
 
-    let sway = Sway::new();
-    read_from_kanata(writer_stream);
+    let mut sway = Sway::new();
+    sway.connect();
+    log::error!("whaaaaaaaaaaaat: {}", sway.current_application().unwrap())
+    // read_from_kanata(writer_stream);
 }
 
 fn init_logger(args: &Args) {
