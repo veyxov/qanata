@@ -122,6 +122,10 @@ fn main_loop(mut s: TcpStream, mut sway: Sway) {
             write_to_kanata(cur_win_name, &mut s);
         } else {
             log::error!("app specific layer for {} not found, fallback to default", cur_win_name);
+
+            // TODO: Extract to configuration
+            let default_layer = String::from("main");
+            write_to_kanata(default_layer, &mut s);
         }
 
         std::thread::sleep(Duration::from_millis(1500));
@@ -129,6 +133,7 @@ fn main_loop(mut s: TcpStream, mut sway: Sway) {
 }
 
 fn should_change_layer(cur_win_name: String) -> bool {
+    // PERF: Early exit, when found
     let file_names: Vec<String> = glob("/home/iz/.config/keyboard/apps/*")
         .expect("Failed to read glob pattern")
         .into_iter()
