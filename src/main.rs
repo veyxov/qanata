@@ -1,4 +1,5 @@
 use clap::Parser;
+use glob::glob;
 use serde::{Deserialize, Serialize};
 use simplelog::*;
 use std::fs::read_dir;
@@ -13,7 +14,6 @@ use std::time::Duration;
 use crate::sway_ipc_connection::Sway;
 
 mod sway_ipc_connection;
-
 
 fn find_socket() -> Option<String> {
     let uid = 1000;
@@ -116,12 +116,33 @@ fn main_loop(mut s: TcpStream, mut sway: Sway) {
     loop {
         let cur_win_name = sway.current_application().unwrap();
 
+        let should_change = should_change_layer(cur_win_name.clone());
         write_to_kanata(cur_win_name, &mut s);
 
-        std::thread::sleep(Duration::from_millis(500));
+        std::thread::sleep(Duration::from_millis(1500));
     }
 }
 
+fn should_change_layer(cur_win_name: String) -> bool {
+    let file_names: Vec<String> = glob("/home/iz/.config/keyboard/apps/*")
+        .expect("Failed to read glob pattern")
+        .into_iter()
+        .map(|e| {
+            //files.push(e.unwrap().display());
+            let val = e.unwrap()
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_owned();
+
+            log::warn!("File found: {}", val);
+            val
+        })
+        .collect();
+
+    return true;
+}
 
 fn write_to_kanata(new: String, s: &mut TcpStream) {
     //log::error!("focused window: {}", win.name);
