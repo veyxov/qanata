@@ -1,7 +1,6 @@
-# Sent current window to kanata
-## Usefull for application specific layers
+# Application aware layer switching 🔁 with kanata ⌨️ and sway 💨
 
-## TODO
+## TODO 📔
 - [ ] Configuration
     - [ ] List of registered apps that have specific layers
         - [x] Currently getting from file system (`~/.config/keyboard/apps/*`)
@@ -14,7 +13,7 @@
     - [ ] Make it work on other than sway?
 - [ ] Whitelist/blacklist
 
-## How it works
+## How it works ⚙️
 1. You have a `main` layer, this will be used by default.
 2. You have a `~/.config/keyboard/apps/org.telegram.desktop` layer.
     When `telegram` is focused it sends the window name (`org.telegram.desktop` in this case) to kanata.
@@ -24,13 +23,13 @@ NOTE: If it can't find the corresponding file in `/apps` it fallbacks to the def
 - Create a file and include it in your kanata configuration
     - NOTE: The name of the file should match what sway returns
 
-## How to run
+## How to run 🏃
 ```sh
 git clone https://github.com/veyxov/qanata
 cd qanata/
 cargo run -- --port 7070
 ```
 
-## Bugs
+## Bugs 🐞
 - [ ] Panics if there are no windows in current workspace (when the wallpaper is visible)
 
