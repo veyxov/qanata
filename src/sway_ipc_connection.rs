@@ -4,7 +4,7 @@ use swayipc::Connection;
 
 use std::env;
 
-pub(crate) struct Sway {
+pub struct Sway {
     pub(crate) connection: Option<Connection>,
 }
 

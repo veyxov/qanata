@@ -3,14 +3,17 @@ use serde::{Deserialize, Serialize};
 use simplelog::*;
 use std::fs::read_dir;
 use std::os::unix::prelude::OsStrExt;
-use std::{str};
+use std::str;
 
 use std::io::Write;
 use std::net::{SocketAddr, TcpStream};
 use std::str::FromStr;
 use std::time::Duration;
 
-mod SwayIpcConnection;
+use crate::sway_ipc_connection::Sway;
+
+mod sway_ipc_connection;
+
 
 fn find_socket() -> Option<String> {
     let uid = 1000;
@@ -63,7 +66,7 @@ fn main() {
     log::info!("successfully connected");
     let writer_stream = kanata_conn.try_clone().expect("clone writer");
 
-    let mut sway = SwayIpcConnection::Sway::new();
+    let mut sway = Sway::new();
     sway.connect();
     main_loop(writer_stream, sway);
 }
@@ -109,7 +112,7 @@ impl FromStr for ServerMessage {
     }
 }
 
-fn main_loop(mut s: TcpStream, mut sway: SwayIpcConnection::Sway) {
+fn main_loop(mut s: TcpStream, mut sway: Sway) {
     loop {
         let cur_win_name = sway.current_application().unwrap();
 
