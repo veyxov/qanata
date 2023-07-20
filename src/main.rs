@@ -116,8 +116,7 @@ fn main() {
 
     let mut sway = Sway::new();
     sway.connect();
-    log::error!("whaaaaaaaaaaaat: {}", sway.current_application().unwrap())
-    // read_from_kanata(writer_stream);
+    main_loop(writer_stream, sway);
 }
 
 fn init_logger(args: &Args) {
@@ -161,8 +160,12 @@ impl FromStr for ServerMessage {
     }
 }
 
-fn read_from_kanata(mut s: TcpStream) {
+fn main_loop(mut s: TcpStream, mut sway: Sway) {
     loop {
+        let cur_win_name = sway.current_application().unwrap();
+
+        write_to_kanata(cur_win_name, &mut s);
+
         std::thread::sleep(Duration::from_millis(500));
     }
 }
