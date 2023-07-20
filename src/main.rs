@@ -6,7 +6,7 @@ use std::fs::read_dir;
 use std::os::unix::prelude::OsStrExt;
 use std::str;
 
-use std::io::Write;
+use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::str::FromStr;
 use std::time::Duration;
@@ -121,7 +121,10 @@ fn main_loop(mut s: TcpStream, mut sway: Sway) {
             log::warn!("can change layer to {}", cur_win_name);
             write_to_kanata(cur_win_name, &mut s);
         } else {
-            log::error!("app specific layer for {} not found, fallback to default", cur_win_name);
+            log::error!(
+                "app specific layer for {} not found, fallback to default",
+                cur_win_name
+            );
 
             // TODO: Extract to configuration
             let default_layer = String::from("main");
@@ -139,12 +142,7 @@ fn should_change_layer(cur_win_name: String) -> bool {
         .into_iter()
         .map(|e| {
             //files.push(e.unwrap().display());
-            let val = e.unwrap()
-                .file_name()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .to_owned();
+            let val = e.unwrap().file_name().unwrap().to_str().unwrap().to_owned();
 
             log::warn!("File found: {}", val);
             val
@@ -163,5 +161,21 @@ fn write_to_kanata(new: String, s: &mut TcpStream) {
     let wsz = s.write(msg.as_bytes()).expect("stream writable");
     if wsz != expected_wsz {
         panic!("failed to write entire message {wsz} {expected_wsz}");
+    }
+}
+
+fn read_from_kanata(mut s: TcpStream) -> String {
+    log::info!("reader starting");
+    let mut buf = vec![0; 256];
+    loop {
+        let sz = s.read(&mut buf).expect("stream readable");
+        let msg = String::from_utf8_lossy(&buf[..sz]);
+        let parsed_msg = ServerMessage::from_str(&msg).expect("kanata sends valid message");
+        match parsed_msg {
+            ServerMessage::LayerChange { new } => {
+                log::info!("reader: kanata changed layers to \"{}\"", new);
+                return new
+            }
+        }
     }
 }
