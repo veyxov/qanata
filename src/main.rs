@@ -56,7 +56,7 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
         // Returns ok when there is a layer change
         // Error if nothing changed
         if let Ok(new_layer) = layer_changed {
-            log::warn!("Changing current layer: {} -> {}", cur_layer, new_layer);
+            log::warn!("Received layer change SIGNAL: {} -> {}", cur_layer, new_layer);
             cur_layer = new_layer;
         }
 
@@ -66,22 +66,18 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
         // NOTE: This is specific to my use case
         // TODO: Add black list, list of applications
         // or layers that should not react to application changes
-        log::error!("Current layer {}", cur_layer);
-        if cur_layer == "russ" {
-            log::warn!("Not in main layer, skipping");
+        log::error!("CURRENT layer: {}", cur_layer);
+        if ["russ", "telegram-insert"].contains(&cur_layer.as_str()) {
+            log::warn!("---SKIPPING---");
             continue;
         }
 
         let should_change = should_change_layer(cur_win_name.clone());
         if should_change {
-            log::warn!("can change layer to {}", cur_win_name);
+            log::warn!("SHOULD CHANGE");
             write_to_kanata(cur_win_name, &mut s);
         } else {
-            log::warn!(
-                "app specific layer for {} not found, fallback to default",
-                cur_win_name
-            );
-
+            log::warn!("FALLBACK");
             // TODO: Extract to configuration
             let default_layer = String::from("main");
             write_to_kanata(default_layer, &mut s);
@@ -100,7 +96,7 @@ fn should_change_layer(cur_win_name: String) -> bool {
             //files.push(e.unwrap().display());
             let val = e.unwrap().file_name().unwrap().to_str().unwrap().to_owned();
 
-            log::warn!("File found: {}", val);
+            log::debug!("File found: {}", val);
             val
         })
         .collect();
@@ -129,7 +125,7 @@ fn read_from_kanata(mut s: TcpStream, sender: Sender<String>) {
         let parsed_msg = ServerMessage::from_str(&msg).expect("kanata sends valid message");
         match parsed_msg {
             ServerMessage::LayerChange { new } => {
-                log::info!("reader: kanata changed layers to \"{}\"", new);
+                log::info!("reader: KANATA CHANGED layers to \"{}\"", new);
                 sender.send(new.clone()).unwrap();
             }
         }
