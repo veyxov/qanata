@@ -40,6 +40,8 @@ fn main() {
     let sway_connection = connect_to_sway();
 
     // Async cross-channel cammunication
+    // Used to send the current layout from `kanata_reader` to `kanata_writer`
+    // When telling kanata to change layout there are some checks for the current layout (unstable)
     let (sender, receiver) = unbounded::<String>();
     thread::spawn(move || read_from_kanata(reader_stream, sender));
 
