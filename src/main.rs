@@ -60,7 +60,7 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
             cur_layer = new_layer;
         }
 
-        let cur_win_name = sway.current_application().unwrap();
+        let cur_win_name = sway.current_application().expect("current application name");
 
         // If not in the main layer, don't change
         // NOTE: This is specific to my use case
@@ -89,12 +89,12 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
 
 fn should_change_layer(cur_win_name: String) -> bool {
     // PERF: Early exit, when found or cache on startup, which creates reload problems
+    // TODO: Make the files path configurable
     let file_names: Vec<String> = glob("/home/iz/.config/keyboard/apps/*")
         .expect("Failed to read glob pattern")
         .into_iter()
         .map(|e| {
-            //files.push(e.unwrap().display());
-            let val = e.unwrap().file_name().unwrap().to_str().unwrap().to_owned();
+            let val = e.expect("glob element").file_name().expect("file name").to_str().unwrap().to_owned();
 
             log::debug!("File found: {}", val);
             val
@@ -126,7 +126,7 @@ fn read_from_kanata(mut s: TcpStream, sender: Sender<String>) {
         match parsed_msg {
             ServerMessage::LayerChange { new } => {
                 log::info!("reader: KANATA CHANGED layers to \"{}\"", new);
-                sender.send(new.clone()).unwrap();
+                sender.send(new.clone()).expect("send layer change to other proccess");
             }
         }
     }
