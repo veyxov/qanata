@@ -1,43 +1,23 @@
-use clap::Parser;
 use crossbeam::channel::{unbounded, Receiver, Sender};
 use glob::glob;
 use serde::{Deserialize, Serialize};
-use simplelog::*;
 use std::{str, thread};
 
 use std::io::{Read, Write};
-use std::net::{SocketAddr, TcpStream};
+use std::net::TcpStream;
 use std::str::FromStr;
 use std::time::Duration;
 
 use crate::sway_ipc_connection::Sway;
 
 mod sway_ipc_connection;
-
-#[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None)]
-struct Args {
-    /// Port that kanata's TCP server is listening on
-    #[clap(short, long)]
-    port: u16,
-
-    /// Enable debug logging
-    #[clap(short, long)]
-    debug: bool,
-
-    /// Enable trace logging (implies --debug as well)
-    #[clap(short, long)]
-    trace: bool,
-}
+mod app_init;
 
 fn main() {
-    let args = configure_logger();
-    let kanata_conn = connect_to_kanata(args);
+    let (kanata_conn, sway_connection) = app_init::init();
 
     let writer_stream = kanata_conn.try_clone().expect("clone writer");
     let reader_stream = kanata_conn;
-
-    let sway_connection = connect_to_sway();
 
     // Async cross-channel cammunication
     // Used to send the current layout from `kanata_reader` to `kanata_writer`
@@ -48,48 +28,6 @@ fn main() {
     main_loop(writer_stream, sway_connection, receiver);
 }
 
-fn connect_to_sway() -> Sway {
-    let mut sway = Sway::new();
-    sway.connect();
-    sway
-}
-
-fn connect_to_kanata(args: Args) -> TcpStream {
-    log::info!("attempting to CONNECT to kanata");
-    let kanata_conn = TcpStream::connect_timeout(
-        &SocketAddr::from(([127, 0, 0, 1], args.port)),
-        Duration::from_secs(5),
-    )
-    .expect("connect to kanata");
-    log::info!("successfully CONNECTED");
-    kanata_conn
-}
-
-fn configure_logger() -> Args {
-    let args = Args::parse();
-    init_logger(&args);
-    args
-}
-
-fn init_logger(args: &Args) {
-    let log_lvl = match (args.debug, args.trace) {
-        (_, true) => LevelFilter::Trace,
-        (true, false) => LevelFilter::Debug,
-        (false, false) => LevelFilter::Info,
-    };
-    let mut log_cfg = ConfigBuilder::new();
-    if let Err(e) = log_cfg.set_time_offset_to_local() {
-        eprintln!("WARNING: could not set log TZ to local: {:?}", e);
-    };
-    CombinedLogger::init(vec![TermLogger::new(
-        log_lvl,
-        log_cfg.build(),
-        TerminalMode::Mixed,
-        ColorChoice::AlwaysAnsi,
-    )])
-    .expect("init logger");
-    log::info!("kanata_connection v{} starting", env!("CARGO_PKG_VERSION"));
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ServerMessage {
