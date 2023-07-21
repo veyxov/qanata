@@ -1,6 +1,5 @@
 use swayipc::Connection;
 
-
 use std::{env, fs::read_dir, os::unix::prelude::OsStrExt};
 
 fn find_socket() -> Option<String> {
@@ -69,4 +68,3 @@ impl Sway {
         None
     }
 }
-

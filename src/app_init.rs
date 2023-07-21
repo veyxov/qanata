@@ -41,6 +41,7 @@ fn connect_to_kanata(args: Args) -> TcpStream {
     log::info!("successfully CONNECTED");
     kanata_conn
 }
+
 fn init_logger(args: &Args) {
     let log_lvl = match (args.debug, args.trace) {
         (_, true) => LevelFilter::Trace,
@@ -73,4 +74,3 @@ pub(crate) fn init() -> (TcpStream, Sway) {
     let sway_connection = connect_to_sway();
     (kanata_conn, sway_connection)
 }
-
