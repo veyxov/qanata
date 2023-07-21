@@ -33,6 +33,6 @@ cargo run -- --port 7070
 ```
 
 ## Bugs 🐞
-- [ ] Panics if there are no windows in current workspace (when the wallpaper is visible)
+- [x] ~~Panics if there are no windows in current workspace (when the wallpaper is visible)~~
 
 # Caution: This is very experimental and raw. Needs a lot of work to make usable

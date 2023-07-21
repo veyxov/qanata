@@ -10,8 +10,8 @@ use std::time::Duration;
 
 use crate::sway_ipc_connection::Sway;
 
-mod sway_ipc_connection;
 mod app_init;
+mod sway_ipc_connection;
 
 fn main() {
     let (kanata_conn, sway_connection) = app_init::init();
@@ -27,7 +27,6 @@ fn main() {
 
     main_loop(writer_stream, sway_connection, receiver);
 }
-
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ServerMessage {
@@ -56,11 +55,19 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
         // Returns ok when there is a layer change
         // Error if nothing changed
         if let Ok(new_layer) = layer_changed {
-            log::warn!("Received layer change SIGNAL: {} -> {}", cur_layer, new_layer);
+            log::warn!(
+                "Received layer change SIGNAL: {} -> {}",
+                cur_layer,
+                new_layer
+            );
             cur_layer = new_layer;
         }
 
-        let cur_win_name = sway.current_application().expect("current application name");
+        let cur_win_name = sway.current_application();
+        if let None = cur_win_name {
+            log::warn!("No app focused!");
+            continue;
+        }
 
         // If not in the main layer, don't change
         // NOTE: This is specific to my use case
@@ -72,10 +79,10 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
             continue;
         }
 
-        let should_change = should_change_layer(cur_win_name.clone());
+        let should_change = should_change_layer(cur_win_name.clone().unwrap());
         if should_change {
             log::warn!("SHOULD CHANGE");
-            write_to_kanata(cur_win_name, &mut s);
+            write_to_kanata(cur_win_name.unwrap(), &mut s);
         } else {
             log::warn!("FALLBACK");
             // TODO: Extract to configuration
@@ -94,7 +101,13 @@ fn should_change_layer(cur_win_name: String) -> bool {
         .expect("Failed to read glob pattern")
         .into_iter()
         .map(|e| {
-            let val = e.expect("glob element").file_name().expect("file name").to_str().unwrap().to_owned();
+            let val = e
+                .expect("glob element")
+                .file_name()
+                .expect("file name")
+                .to_str()
+                .unwrap()
+                .to_owned();
 
             log::debug!("File found: {}", val);
             val
@@ -126,7 +139,9 @@ fn read_from_kanata(mut s: TcpStream, sender: Sender<String>) {
         match parsed_msg {
             ServerMessage::LayerChange { new } => {
                 log::info!("reader: KANATA CHANGED layers to \"{}\"", new);
-                sender.send(new.clone()).expect("send layer change to other proccess");
+                sender
+                    .send(new.clone())
+                    .expect("send layer change to other proccess");
             }
         }
     }
