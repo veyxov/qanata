@@ -14,12 +14,6 @@ use crate::sway_ipc_connection::Sway;
 
 mod sway_ipc_connection;
 
-#[derive(Debug, Serialize, Deserialize)]
-struct WinInfo {
-    name: String,
-    is_focused: bool,
-}
-
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
@@ -37,26 +31,42 @@ struct Args {
 }
 
 fn main() {
-    let args = Args::parse();
-    init_logger(&args);
-    log::info!("attempting to connect to kanata");
-    let kanata_conn = TcpStream::connect_timeout(
-        &SocketAddr::from(([127, 0, 0, 1], args.port)),
-        Duration::from_secs(5),
-    )
-    .expect("connect to kanata");
-    log::info!("successfully connected");
+    let args = configure_logger();
+    let kanata_conn = connect_to_kanata(args);
+
     let writer_stream = kanata_conn.try_clone().expect("clone writer");
     let reader_stream = kanata_conn;
 
-    let mut sway = Sway::new();
-    sway.connect();
+    let sway_connection = connect_to_sway();
 
     // Async cross-channel cammunication
     let (sender, receiver) = unbounded::<String>();
     thread::spawn(move || read_from_kanata(reader_stream, sender));
 
-    main_loop(writer_stream, sway, receiver);
+    main_loop(writer_stream, sway_connection, receiver);
+}
+
+fn connect_to_sway() -> Sway {
+    let mut sway = Sway::new();
+    sway.connect();
+    sway
+}
+
+fn connect_to_kanata(args: Args) -> TcpStream {
+    log::info!("attempting to CONNECT to kanata");
+    let kanata_conn = TcpStream::connect_timeout(
+        &SocketAddr::from(([127, 0, 0, 1], args.port)),
+        Duration::from_secs(5),
+    )
+    .expect("connect to kanata");
+    log::info!("successfully CONNECTED");
+    kanata_conn
+}
+
+fn configure_logger() -> Args {
+    let args = Args::parse();
+    init_logger(&args);
+    args
 }
 
 fn init_logger(args: &Args) {
@@ -76,10 +86,7 @@ fn init_logger(args: &Args) {
         ColorChoice::AlwaysAnsi,
     )])
     .expect("init logger");
-    log::info!(
-        "kanata_example_tcp_client v{} starting",
-        env!("CARGO_PKG_VERSION")
-    );
+    log::info!("kanata_connection v{} starting", env!("CARGO_PKG_VERSION"));
 }
 
 #[derive(Debug, Serialize, Deserialize)]
