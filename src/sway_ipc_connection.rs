@@ -1,8 +1,24 @@
-use super::find_socket;
 use swayipc::Connection;
 
 
-use std::env;
+use std::{env, fs::read_dir, os::unix::prelude::OsStrExt};
+
+fn find_socket() -> Option<String> {
+    let uid = 1000;
+    if let Some(run_user) = read_dir(format!("/run/user/{}", uid)).as_mut().ok() {
+        while let Some(entry) = run_user.next() {
+            let path = entry.ok()?.path();
+            if let Some(fname) = path.file_name() {
+                if fname.as_bytes().starts_with(b"sway-ipc.") {
+                    if let Ok(path) = path.into_os_string().into_string() {
+                        return Some(path);
+                    }
+                }
+            }
+        }
+    }
+    None
+}
 
 pub struct Sway {
     pub(crate) connection: Option<Connection>,

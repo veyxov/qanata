@@ -3,8 +3,6 @@ use crossbeam::channel::{unbounded, Receiver, Sender};
 use glob::glob;
 use serde::{Deserialize, Serialize};
 use simplelog::*;
-use std::fs::read_dir;
-use std::os::unix::prelude::OsStrExt;
 use std::{str, thread};
 
 use std::io::{Read, Write};
@@ -15,23 +13,6 @@ use std::time::Duration;
 use crate::sway_ipc_connection::Sway;
 
 mod sway_ipc_connection;
-
-fn find_socket() -> Option<String> {
-    let uid = 1000;
-    if let Some(run_user) = read_dir(format!("/run/user/{}", uid)).as_mut().ok() {
-        while let Some(entry) = run_user.next() {
-            let path = entry.ok()?.path();
-            if let Some(fname) = path.file_name() {
-                if fname.as_bytes().starts_with(b"sway-ipc.") {
-                    if let Ok(path) = path.into_os_string().into_string() {
-                        return Some(path);
-                    }
-                }
-            }
-        }
-    }
-    None
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 struct WinInfo {
