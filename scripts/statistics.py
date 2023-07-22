@@ -19,6 +19,7 @@ with open(filename, "r") as file:
     for line in lines:
         if "SENT=" in line:
             sent_key = line.split("SENT=")[1].strip()
+            sent_key = sent_key.replace("KEY_", "")  # Remove the "KEY_" prefix
             sent_keys_count[sent_key] = sent_keys_count.get(sent_key, 0) + 1
 
 # Step 3: Generate the heatmap.
@@ -42,4 +43,3 @@ for bar in heatmap:
 
 plt.tight_layout()
 plt.show()
-
