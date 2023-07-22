@@ -32,11 +32,14 @@ cmap = cm.get_cmap('plasma')
 normalize = plt.Normalize(vmin=min(counts), vmax=max(counts))
 colors = [cmap(normalize(value)) for value in counts]
 
-fig, ax = plt.subplots(figsize=(10, 6))
+fig, ax = plt.subplots(figsize=(12, 6))  # Adjust the figure size
 heatmap = ax.bar(keys, counts, color=colors)  # Use colors for bars
 ax.set_xlabel("Sent Keys")
 ax.set_ylabel("Count")
 ax.set_title("Sent Keys Heatmap (Color-coded)")
+
+# Rotate the x-axis labels for better readability
+plt.xticks(rotation=45, ha='right')
 
 # Annotate each bar with its count value.
 for bar in heatmap:
