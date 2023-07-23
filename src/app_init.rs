@@ -13,7 +13,7 @@ use std::{
 #[clap(author, version, about, long_about = None)]
 pub struct Args {
     /// Port that kanata's TCP server is listening on
-    #[clap(short, long)]
+    #[clap(short, long, default_value_t=7070)]
     pub port: u16,
 
     /// Enable debug logging
