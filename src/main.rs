@@ -16,18 +16,25 @@ mod sway_ipc_connection;
 pub mod whitelist;
 
 fn main() {
-    let (kanata_conn, sway_connection) = app_init::init();
+    let (kanata_conn, sway_conn) = app_init::init();
 
-    let writer_stream = kanata_conn.try_clone().expect("clone writer");
-    let reader_stream = kanata_conn;
+    match kanata_conn {
+        Ok(kanata) => {
+            let writer_stream = kanata.try_clone().expect("clone writer");
+            let reader_stream = kanata;
 
-    // Async cross-channel cammunication
-    // Used to send the current layout from `kanata_reader` to `kanata_writer`
-    // When telling kanata to change layout there are some checks for the current layout (unstable)
-    let (sender, receiver) = unbounded::<String>();
-    thread::spawn(move || read_from_kanata(reader_stream, sender));
+            // Async cross-channel cammunication
+            // Used to send the current layout from `kanata_reader` to `kanata_writer`
+            // When telling kanata to change layout there are some checks for the current layout (unstable)
+            let (sender, receiver) = unbounded::<String>();
+            thread::spawn(move || read_from_kanata(reader_stream, sender));
 
-    main_loop(writer_stream, sway_connection, receiver);
+            main_loop(writer_stream, sway_conn, receiver);
+        }
+        Err(e) => {
+            log::error!("Cannot connect to kanata: {}", e);
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

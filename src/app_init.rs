@@ -35,15 +35,16 @@ fn connect_to_sway() -> Sway {
     sway
 }
 
-fn connect_to_kanata(args: Args) -> TcpStream {
+fn connect_to_kanata(args: Args) -> anyhow::Result<TcpStream> {
     log::info!("attempting to CONNECT to kanata");
     let kanata_conn = TcpStream::connect_timeout(
         &SocketAddr::from(([127, 0, 0, 1], args.port)),
         Duration::from_secs(5),
-    )
-    .expect("connect to kanata");
+    )?;
+
     log::info!("successfully CONNECTED");
-    kanata_conn
+
+    Ok(kanata_conn)
 }
 
 fn init_logger(args: &Args) {
@@ -72,7 +73,7 @@ fn configure_logger() -> Args {
     args
 }
 
-pub(crate) fn init() -> (TcpStream, Sway) {
+pub(crate) fn init() -> (anyhow::Result<TcpStream>, Sway) {
     let args = configure_logger();
     let kanata_conn = connect_to_kanata(args);
     let sway_connection = connect_to_sway();
