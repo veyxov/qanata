@@ -1,3 +1,4 @@
+use anyhow::bail;
 use clap::Parser;
 use log::LevelFilter;
 use simplelog::{ColorChoice, CombinedLogger, ConfigBuilder, TermLogger, TerminalMode};
@@ -29,10 +30,15 @@ pub struct Args {
     pub white_list_file: Option<String>,
 }
 
-fn connect_to_sway() -> Sway {
+fn connect_to_sway() -> anyhow::Result<Sway> {
     let mut sway = Sway::new();
     sway.connect();
-    sway
+
+    if sway.connection.is_none() {
+        bail!("Could not connect to sway");
+    }
+
+    Ok(sway)
 }
 
 fn connect_to_kanata(args: Args) -> anyhow::Result<TcpStream> {
@@ -73,7 +79,7 @@ fn configure_logger() -> Args {
     args
 }
 
-pub(crate) fn init() -> (anyhow::Result<TcpStream>, Sway) {
+pub(crate) fn init() -> (anyhow::Result<TcpStream>, anyhow::Result<Sway>) {
     let args = configure_logger();
     let kanata_conn = connect_to_kanata(args);
     let sway_connection = connect_to_sway();

@@ -38,13 +38,13 @@ impl Sway {
                         return;
                     }
                 };
-                println!("$SWAYSOCK is not set. Defaulting to \"{}\"", path);
+                log::warn!("$SWAYSOCK is not set. Defaulting to \"{}\"", path);
                 env::set_var("SWAYSOCK", path);
             }
 
             match Connection::new() {
                 Ok(connection) => self.connection = Some(connection),
-                Err(e) => println!("SwayClient#connect() failed: {}", e),
+                Err(e) => log::error!("SwayClient#connect() failed: {}", e),
             }
         }
     }

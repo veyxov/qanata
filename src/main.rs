@@ -29,7 +29,14 @@ fn main() {
             let (sender, receiver) = unbounded::<String>();
             thread::spawn(move || read_from_kanata(reader_stream, sender));
 
-            main_loop(writer_stream, sway_conn, receiver);
+            match sway_conn {
+                Ok(sway) => {
+                    main_loop(writer_stream, sway, receiver);
+                },
+                Err(e) => {
+                    log::error!("Cannot connect to sway: {}", e);
+                }
+            }
         }
         Err(e) => {
             log::error!("Cannot connect to kanata: {}", e);
