@@ -11,7 +11,7 @@
 - [ ] Don't rely on swaymsg, make universal
     - [x] Now using swayipc
     - [ ] Make it work on other than sway?
-- [ ] Whitelist/blacklist
+- [x] Whitelist/blacklist
 
 ## How it works ⚙️
 1. You have a `main` layer, this will be used by default.
