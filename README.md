@@ -1,4 +1,4 @@
-# Application aware layer switching 🔁 with kanata ⌨️ and sway 💨
+# Application aware layer switching 🔁 with [kanata](https://github.com/jtroo/kanata/) ⌨️ and [sway](https://github.com/swaywm/sway) 💨
 
 ## TODO 📔
 - [ ] Configuration
