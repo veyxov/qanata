@@ -11,18 +11,22 @@ use std::{
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
-struct Args {
+pub struct Args {
     /// Port that kanata's TCP server is listening on
     #[clap(short, long)]
-    port: u16,
+    pub port: u16,
 
     /// Enable debug logging
     #[clap(short, long)]
-    debug: bool,
+    pub debug: bool,
 
     /// Enable trace logging (implies --debug as well)
     #[clap(short, long)]
-    trace: bool,
+    pub trace: bool,
+
+    /// Applications that should be ignored (don't change layer based on app)
+    #[clap(short, long)]
+    pub white_list_file: String,
 }
 
 fn connect_to_sway() -> Sway {

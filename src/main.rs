@@ -9,9 +9,11 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use crate::sway_ipc_connection::Sway;
+use crate::whitelist::get_white_list;
 
 mod app_init;
 mod sway_ipc_connection;
+pub mod whitelist;
 
 fn main() {
     let (kanata_conn, sway_connection) = app_init::init();
@@ -74,7 +76,10 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
         // TODO: Add black list, list of applications
         // or layers that should not react to application changes
         log::error!("CURRENT layer: {}", cur_layer);
-        if ["russ", "telegram-insert"].contains(&cur_layer.as_str()) {
+
+        let whitelist = get_white_list().expect("whitelist");
+
+        if whitelist.contains(&cur_layer) {
             log::warn!("---SKIPPING---");
             continue;
         }
