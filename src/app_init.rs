@@ -26,7 +26,7 @@ pub struct Args {
 
     /// Applications that should be ignored (don't change layer based on app)
     #[clap(short, long)]
-    pub white_list_file: String,
+    pub white_list_file: Option<String>,
 }
 
 fn connect_to_sway() -> Sway {

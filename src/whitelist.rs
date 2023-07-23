@@ -16,24 +16,26 @@ fn read_lines_from_file(file_path: &str) -> Result<Vec<String>> {
     Ok(lines)
 }
 
-pub(crate) fn get_white_list() -> Result<Vec<String>> {
+pub(crate) fn get_white_list() -> Option<Vec<String>> {
     let args = Args::parse();
     let file_path = args.white_list_file;
+    if let Some(file) = file_path {
+        match read_lines_from_file(&file) {
+            Ok(lines) => {
+                log::debug!("Entries in whitelist file");
+                for line in &lines {
+                    log::debug!("{}", line);
+                }
 
-    if !file_path.is_empty() {
-        log::error!("{}", file_path);
-    }
-
-    match read_lines_from_file(&file_path) {
-        Ok(lines) => {
-            // Now you have a Vec<String> containing each line as a separate string.
-            // You can work with the `lines` vector here.
-            for line in &lines {
-                println!("{}", line);
+                return Some(lines);
             }
-            
-            return Ok(lines);
+            Err(e) => {
+                log::error!("error reading file: {}", e);
+                None
+            }
         }
-        Err(e) => Err(e)
+    } else {
+        log::warn!("no whitelist");
+        return None;
     }
 }

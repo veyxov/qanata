@@ -71,17 +71,14 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
             continue;
         }
 
-        // If not in the main layer, don't change
-        // NOTE: This is specific to my use case
-        // TODO: Add black list, list of applications
-        // or layers that should not react to application changes
         log::error!("CURRENT layer: {}", cur_layer);
 
-        let whitelist = get_white_list().expect("whitelist");
-
-        if whitelist.contains(&cur_layer) {
-            log::warn!("---SKIPPING---");
-            continue;
+        // Don't change layer if in a whitelisted file
+        if let Some(whitelist) = get_white_list() {
+            if whitelist.contains(&cur_layer) {
+                log::warn!("---SKIPPING {}---", &cur_layer);
+                continue;
+            }
         }
 
         let should_change = should_change_layer(cur_win_name.clone().unwrap());
