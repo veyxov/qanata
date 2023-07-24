@@ -41,14 +41,14 @@ if args.file:
     layers = list(sent_keys_by_layer.keys())
 
     fig, ax = plt.subplots(figsize=(12, 6))
-    plt.subplots_adjust(bottom=0.2)
+    plt.subplots_adjust(bottom=0.3)
 
     # Create a dictionary to map the checkbox objects to their corresponding layer visibility
     checkbox_dict = {}
     visibility_dict = {}  # Dictionary to store the visibility state for each layer
     for idx, layer in enumerate(layers):
-        visibility_dict[layer] = True
-        checkbox = CheckButtons(plt.axes([0.05 + idx * 0.15, 0.02, 0.1, 0.05]), [layer], [True])
+        visibility_dict[layer] = False  # Set all layers to be unchecked by default
+        checkbox = CheckButtons(plt.axes([0.1 + (idx % 6) * 0.15, 0.9 - (idx // 6) * 0.1, 0.1, 0.05]), [layer], [False])
         checkbox.on_clicked(lambda event, layer=layer: update_visibility(event, layer))
         checkbox_dict[layer] = checkbox
 
@@ -97,4 +97,3 @@ if args.file:
 
 else:
     print("No file provided\nPlease specify --file")
-
