@@ -1,7 +1,4 @@
 # Keyboard heatmap and statistics
-#
-# NOTE: please forgive me, I'm not a python dev 😁
-# oooooh, I'm a python dev now 😎
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,10 +20,17 @@ if args.file:
     with open(file_name, "r") as file:
         lines = file.readlines()
         for line in lines:
-            if "SENT=" in line:
-                sent_key = line.split("SENT=")[1].strip()
+            try:
+                sp = line.split("|")
+                actual_key = sp[0]
+                layer = sp[1]
+                sent_key = sp[2].strip()
+
+                print(sent_key)
                 sent_key = sent_key.replace("KEY_", "")  # Remove the "KEY_" prefix
                 sent_keys_count[sent_key] = sent_keys_count.get(sent_key, 0) + 1
+            except:
+                print("Error while processing: " + line)
 
     # Step 3: Generate the heatmap with color-coded bars.
     keys = list(sent_keys_count.keys())
