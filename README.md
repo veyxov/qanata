@@ -32,6 +32,17 @@ cd qanata/
 cargo run -- --port 7070
 ```
 
+# Visualize statistics generated from kanata
+python script for generating heatmap for key presses
+## TODO:
+- [ ] Fork kanata and apply the logging patches
+
+```sh
+./run_stats.sh --file path/to/kanata/log
+
+# Current format: actual_key_presses|layer|resulting_key_press
+```
+
 ## Bugs 🐞
 - [x] ~~Panics if there are no windows in current workspace (when the wallpaper is visible)~~
 
