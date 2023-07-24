@@ -11,7 +11,6 @@ import argparse
 # Step 1: Save the provided data into a text file named "key_events.txt".
 
 # Step 2: Read data from the file and process it.
-filename = "/home/iz/kanata.log"
 parser = argparse.ArgumentParser()
 parser.add_argument("--file", help="Specify the file path")
 args = parser.parse_args()
@@ -21,7 +20,7 @@ if args.file:
     # Dictionary to store the count of each sent key
     sent_keys_count = {}
 
-    with open(filename, "r") as file:
+    with open(file_name, "r") as file:
         lines = file.readlines()
         for line in lines:
             if "SENT=" in line:
