@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.cm as cm
 import argparse
-from matplotlib.widgets import Button
+from matplotlib.widgets import CheckButtons
 
 # Step 1: Save the provided data into a text file named "key_events.txt".
 
@@ -37,29 +37,34 @@ if args.file:
             except:
                 print("Error while processing: " + line)
 
-    # Step 3: Generate the heatmap with color-coded bars and a button to toggle layers.
+    # Step 3: Generate the heatmap with color-coded bars and checkboxes for each layer.
     layers = list(sent_keys_by_layer.keys())
-    current_layer_index = [0]  # Use a list to hold the current layer index
 
-    def update_heatmap(event):
-        current_layer_index[0] = (current_layer_index[0] + 1) % len(layers)  # Toggle between layers
-        ax.clear()
+    fig, ax = plt.subplots(figsize=(12, 6))
+    plt.subplots_adjust(bottom=0.2)
 
-        layer = layers[current_layer_index[0]]
-        keys = list(sent_keys_by_layer[layer].keys())
-        counts = list(sent_keys_by_layer[layer].values())
+    # Create a dictionary to map the checkbox objects to their corresponding layer visibility
+    checkbox_dict = {}
+    visibility_dict = {}  # Dictionary to store the visibility state for each layer
+    for idx, layer in enumerate(layers):
+        visibility_dict[layer] = True
+        checkbox = CheckButtons(plt.axes([0.05 + idx * 0.15, 0.02, 0.1, 0.05]), [layer], [True])
+        checkbox.on_clicked(lambda event, layer=layer: update_visibility(event, layer))
+        checkbox_dict[layer] = checkbox
 
-        # Normalize the counts for color coding
-        cmap = cm.get_cmap('plasma')
+    cmap = cm.get_cmap('plasma')
+    bars_dict = {}  # Dictionary to store references to the bars (Rectangles) for each layer
+    for layer, data in sent_keys_by_layer.items():
+        keys = list(data.keys())
+        counts = list(data.values())
+
         normalize = plt.Normalize(vmin=min(counts), vmax=max(counts))
         colors = [cmap(normalize(value)) for value in counts]
 
-        heatmap = ax.bar(keys, counts, color=colors)  # Use colors for bars
-        ax.set_ylabel("Count")
-        ax.set_title(f"Sent Keys Heatmap for Layer {layer} (Color-coded)")
+        bars = ax.bar(keys, counts, color=colors, alpha=0.5)  # Use colors for bars (with alpha for better visibility)
+        bars_dict[layer] = bars  # Store the bars for this layer in the dictionary
 
-        # Annotate each bar with its count value.
-        for bar in heatmap:
+        for bar in bars:
             height = bar.get_height()
             ax.annotate('{}'.format(height),
                         xy=(bar.get_x() + bar.get_width() / 2, height),
@@ -67,19 +72,29 @@ if args.file:
                         textcoords="offset points",
                         ha='center', va='bottom')
 
-        # Rotate the x-axis labels for better readability
-        ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+    def update_visibility(event, layer):
+        visibility_dict[layer] = not visibility_dict[layer]  # Toggle visibility state
+
+        for bar in bars_dict[layer]:
+            bar.set_visible(visibility_dict[layer])
+
+        for annotation in ax.texts:
+            if layer in annotation.get_text():
+                annotation.set_visible(visibility_dict[layer])
+
+        # Adjust x-axis limits to accommodate the visible bars
+        visible_layers = [layer for layer, visible in visibility_dict.items() if visible]
+        keys = [key for layer in visible_layers for key in sent_keys_by_layer[layer].keys()]
+        ax.set_xlim(keys[0], keys[-1])
+
         plt.draw()
 
-    fig, ax = plt.subplots(figsize=(12, 6))
-    toggle_button_ax = plt.axes([0.8, 0.01, 0.1, 0.05])
-    toggle_button = Button(toggle_button_ax, 'Toggle Layer')
-    toggle_button.on_clicked(update_heatmap)
-    plt.subplots_adjust(bottom=0.1)
-
-    update_heatmap(None)  # Show the initial heatmap
+    ax.set_ylabel("Count")
+    ax.set_title("Sent Keys Heatmap (Color-coded)")
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
 
     plt.show()
 
 else:
     print("No file provided\nPlease specify --file")
+
