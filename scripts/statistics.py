@@ -1,5 +1,4 @@
 # Keyboard heatmap and statistics
-
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.cm as cm
@@ -14,8 +13,8 @@ args = parser.parse_args()
 if args.file:
     file_name = args.file
     # Now you can use the 'file_name' variable in your code.
-    # Dictionary to store the count of each sent key
-    sent_keys_count = {}
+    # Dictionary to store the count of each sent key and its layer
+    sent_keys_by_layer = {}
 
     with open(file_name, "r") as file:
         lines = file.readlines()
@@ -26,40 +25,48 @@ if args.file:
                 layer = sp[1]
                 sent_key = sp[2].strip()
 
-                print(sent_key)
                 sent_key = sent_key.replace("KEY_", "")  # Remove the "KEY_" prefix
-                sent_keys_count[sent_key] = sent_keys_count.get(sent_key, 0) + 1
+                combined_key = f"{sent_key} ({layer})"  # Include layer in the key label
+
+                if layer not in sent_keys_by_layer:
+                    sent_keys_by_layer[layer] = {}
+
+                sent_keys_by_layer[layer][combined_key] = sent_keys_by_layer[layer].get(combined_key, 0) + 1
             except:
                 print("Error while processing: " + line)
 
-    # Step 3: Generate the heatmap with color-coded bars.
-    keys = list(sent_keys_count.keys())
-    counts = list(sent_keys_count.values())
-
-    # Get the color map and normalize the counts for color coding
+    # Step 3: Generate separate heatmaps with color-coded bars for each layer.
     cmap = cm.get_cmap('plasma')
-    normalize = plt.Normalize(vmin=min(counts), vmax=max(counts))
-    colors = [cmap(normalize(value)) for value in counts]
+    fig, axs = plt.subplots(len(sent_keys_by_layer), 1, figsize=(12, 6 * len(sent_keys_by_layer)), sharex=True)
+    fig.subplots_adjust(hspace=0.5)
 
-    fig, ax = plt.subplots(figsize=(12, 6))  # Adjust the figure size
-    heatmap = ax.bar(keys, counts, color=colors)  # Use colors for bars
-    ax.set_xlabel("Sent Keys")
-    ax.set_ylabel("Count")
-    ax.set_title("Sent Keys Heatmap (Color-coded)")
+    for idx, layer in enumerate(sent_keys_by_layer):
+        keys = list(sent_keys_by_layer[layer].keys())
+        counts = list(sent_keys_by_layer[layer].values())
 
-    # Rotate the x-axis labels for better readability
-    plt.xticks(rotation=45, ha='right')
+        # Normalize the counts for color coding
+        normalize = plt.Normalize(vmin=min(counts), vmax=max(counts))
+        colors = [cmap(normalize(value)) for value in counts]
 
-    # Annotate each bar with its count value.
-    for bar in heatmap:
-        height = bar.get_height()
-        ax.annotate('{}'.format(height),
-                    xy=(bar.get_x() + bar.get_width() / 2, height),
-                    xytext=(0, 3),
-                    textcoords="offset points",
-                    ha='center', va='bottom')
+        ax = axs[idx]
+        heatmap = ax.bar(keys, counts, color=colors)  # Use colors for bars
+        ax.set_ylabel("Count")
+        ax.set_title(f"Sent Keys Heatmap for Layer {layer} (Color-coded)")
+
+        # Annotate each bar with its count value.
+        for bar in heatmap:
+            height = bar.get_height()
+            ax.annotate('{}'.format(height),
+                        xy=(bar.get_x() + bar.get_width() / 2, height),
+                        xytext=(0, 3),
+                        textcoords="offset points",
+                        ha='center', va='bottom')
+
+    # Rotate the x-axis labels for better readability in the last subplot
+    axs[-1].set_xticklabels(axs[-1].get_xticklabels(), rotation=45, ha='right')
 
     plt.tight_layout()
     plt.show()
 else:
     print("No file provided\nPlease specify --file")
+
