@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.cm as cm
 import argparse
+from matplotlib.widgets import Button
 
 # Step 1: Save the provided data into a text file named "key_events.txt".
 
@@ -10,6 +11,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--file", help="Specify the file path")
 args = parser.parse_args()
+
 if args.file:
     file_name = args.file
     # Now you can use the 'file_name' variable in your code.
@@ -35,20 +37,23 @@ if args.file:
             except:
                 print("Error while processing: " + line)
 
-    # Step 3: Generate separate heatmaps with color-coded bars for each layer.
-    cmap = cm.get_cmap('plasma')
-    fig, axs = plt.subplots(len(sent_keys_by_layer), 1, figsize=(12, 6 * len(sent_keys_by_layer)), sharex=True)
-    fig.subplots_adjust(hspace=0.5)
+    # Step 3: Generate the heatmap with color-coded bars and a button to toggle layers.
+    layers = list(sent_keys_by_layer.keys())
+    current_layer_index = [0]  # Use a list to hold the current layer index
 
-    for idx, layer in enumerate(sent_keys_by_layer):
+    def update_heatmap(event):
+        current_layer_index[0] = (current_layer_index[0] + 1) % len(layers)  # Toggle between layers
+        ax.clear()
+
+        layer = layers[current_layer_index[0]]
         keys = list(sent_keys_by_layer[layer].keys())
         counts = list(sent_keys_by_layer[layer].values())
 
         # Normalize the counts for color coding
+        cmap = cm.get_cmap('plasma')
         normalize = plt.Normalize(vmin=min(counts), vmax=max(counts))
         colors = [cmap(normalize(value)) for value in counts]
 
-        ax = axs[idx]
         heatmap = ax.bar(keys, counts, color=colors)  # Use colors for bars
         ax.set_ylabel("Count")
         ax.set_title(f"Sent Keys Heatmap for Layer {layer} (Color-coded)")
@@ -62,11 +67,19 @@ if args.file:
                         textcoords="offset points",
                         ha='center', va='bottom')
 
-    # Rotate the x-axis labels for better readability in the last subplot
-    axs[-1].set_xticklabels(axs[-1].get_xticklabels(), rotation=45, ha='right')
+        # Rotate the x-axis labels for better readability
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+        plt.draw()
 
-    plt.tight_layout()
+    fig, ax = plt.subplots(figsize=(12, 6))
+    toggle_button_ax = plt.axes([0.8, 0.01, 0.1, 0.05])
+    toggle_button = Button(toggle_button_ax, 'Toggle Layer')
+    toggle_button.on_clicked(update_heatmap)
+    plt.subplots_adjust(bottom=0.1)
+
+    update_heatmap(None)  # Show the initial heatmap
+
     plt.show()
+
 else:
     print("No file provided\nPlease specify --file")
-
