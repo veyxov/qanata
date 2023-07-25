@@ -95,7 +95,7 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
             continue;
         }
 
-        log::error!("CURRENT layer: {}", cur_layer);
+        log::info!("CURRENT layer: {}", cur_layer);
 
         // Don't change layer if in a whitelisted file
         if let Some(whitelist) = get_white_list() {
