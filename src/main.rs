@@ -65,7 +65,12 @@ impl FromStr for ServerMessage {
 fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
     let mut cur_layer = String::from("main");
 
+    let mut wait: bool = false;
     loop {
+        if wait {
+            // Sleep for 1.5 seconds to prevent overheat
+            std::thread::sleep(Duration::from_millis(1500));
+        }
         let layer_changed = receiver.recv();
 
         // Returns ok when there is a layer change
@@ -77,11 +82,16 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
                 new_layer
             );
             cur_layer = new_layer;
+
+            wait = false;
         }
 
         let cur_win_name = sway.current_application();
         if let None = cur_win_name {
             log::warn!("No app focused!");
+
+            // Don't run the loop forever when no app is focused, fixes the overheat problem
+            wait = true;
             continue;
         }
 
