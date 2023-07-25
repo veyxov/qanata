@@ -47,6 +47,6 @@ cargo run -- --port 7070
 
 ## Bugs 🐞
 - [x] ~~Panics if there are no windows in current workspace (when the wallpaper is visible)~~
-- [x] Overheats the CPU when sway is locked; Fixed in [commit](e8ae9d1e51606bab5a3d8a57bb97eab2cb01de1b)
+- [x] Overheats the CPU when sway is locked; Fixed in [commit](https://github.com/veyxov/qanata/commit/e8ae9d1e51606bab5a3d8a57bb97eab2cb01de1b)
 
 # Caution: This is very experimental and raw. Needs a lot of work to make usable
