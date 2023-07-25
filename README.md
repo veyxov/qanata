@@ -47,5 +47,6 @@ cargo run -- --port 7070
 
 ## Bugs 🐞
 - [x] ~~Panics if there are no windows in current workspace (when the wallpaper is visible)~~
+- [ ] Overheats the CPU when sway is locked, don't know why 😢
 
 # Caution: This is very experimental and raw. Needs a lot of work to make usable
