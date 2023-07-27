@@ -38,7 +38,7 @@ if args.file:
                 print("Error while processing: " + line)
 
     # Step 3: Generate the heatmap with color-coded bars and checkboxes for each layer.
-    layers = list(sent_keys_by_layer.keys())
+        layers = list(sent_keys_by_layer.keys())
 
     fig, ax = plt.subplots(figsize=(12, 6))
     plt.subplots_adjust(bottom=0.3)
@@ -57,6 +57,11 @@ if args.file:
     for layer, data in sent_keys_by_layer.items():
         keys = list(data.keys())
         counts = list(data.values())
+
+        # Sort the keys and counts in descending order of counts
+        sorted_indices = np.argsort(counts)[::-1]
+        keys = np.array(keys)[sorted_indices]
+        counts = np.array(counts)[sorted_indices]
 
         normalize = plt.Normalize(vmin=min(counts), vmax=max(counts))
         colors = [cmap(normalize(value)) for value in counts]
