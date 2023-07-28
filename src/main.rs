@@ -101,6 +101,7 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
         if let Some(whitelist) = get_white_list() {
             if whitelist.contains(&cur_layer) {
                 log::warn!("---SKIPPING {}---", &cur_layer);
+                wait = true;
                 continue;
             }
         }
