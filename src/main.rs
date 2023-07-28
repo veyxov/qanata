@@ -72,7 +72,7 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
             std::thread::sleep(Duration::from_millis(1500));
         }
         let layer_changed = receiver.recv();
-
+        log::debug!("Received layer change SIGNAL: {:?}", layer_changed);
         // Returns ok when there is a layer change
         // Error if nothing changed
         if let Ok(new_layer) = layer_changed {
