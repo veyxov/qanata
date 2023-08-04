@@ -146,8 +146,10 @@ fn should_change_layer(cur_win_name: String) -> bool {
 
 fn write_to_kanata(new: String, s: &mut TcpStream) {
     log::info!("writer: telling kanata to change layer to \"{new}\"");
+
     let msg = serde_json::to_string(&ClientMessage::ChangeLayer { new }).expect("deserializable");
     let expected_wsz = msg.len();
+
     let wsz = s.write(msg.as_bytes()).expect("stream writable");
     if wsz != expected_wsz {
         panic!("failed to write entire message {wsz} {expected_wsz}");
@@ -158,8 +160,6 @@ fn read_from_kanata(mut s: TcpStream, sender: Sender<String>) {
     log::info!("reader starting");
     let mut buf = vec![0; 256];
     loop {
-        log::info!("reader: waiting for message from kanata");
-
         let sz = s.read(&mut buf).expect("stream readable");
         let msg = String::from_utf8_lossy(&buf[..sz]);
         let parsed_msg = ServerMessage::from_str(&msg).expect("kanata sends valid message");

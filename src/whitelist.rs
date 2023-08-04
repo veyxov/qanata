@@ -24,7 +24,7 @@ pub(crate) fn get_white_list() -> Option<Vec<String>> {
             Ok(lines) => {
                 log::debug!("Entries in whitelist file");
                 for line in &lines {
-                    log::debug!("{}", line);
+                    log::debug!("- {}", line);
                 }
 
                 return Some(lines);
@@ -35,7 +35,7 @@ pub(crate) fn get_white_list() -> Option<Vec<String>> {
             }
         }
     } else {
-        log::warn!("no whitelist");
+        log::debug!("no whitelist");
         return None;
     }
 }
