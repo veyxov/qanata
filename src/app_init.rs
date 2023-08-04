@@ -42,13 +42,13 @@ fn connect_to_sway() -> anyhow::Result<Sway> {
 }
 
 fn connect_to_kanata(args: Args) -> anyhow::Result<TcpStream> {
-    log::info!("attempting to CONNECT to kanata");
+    log::info!("Connecting to kanata...");
     let kanata_conn = TcpStream::connect_timeout(
         &SocketAddr::from(([127, 0, 0, 1], args.port)),
         Duration::from_secs(5),
     )?;
 
-    log::info!("successfully CONNECTED");
+    log::info!("...connected");
 
     Ok(kanata_conn)
 }
@@ -70,7 +70,6 @@ fn init_logger(args: &Args) {
         ColorChoice::AlwaysAnsi,
     )])
     .expect("init logger");
-    log::info!("kanata_connection v{} starting", env!("CARGO_PKG_VERSION"));
 }
 
 fn configure_logger() -> Args {

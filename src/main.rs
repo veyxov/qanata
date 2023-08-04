@@ -72,7 +72,7 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
             std::thread::sleep(Duration::from_millis(1500));
         }
         let layer_changed = receiver.recv();
-        log::debug!("Received layer change SIGNAL: {:?}", layer_changed);
+
         // Returns ok when there is a layer change
         // Error if nothing changed
         if let Ok(new_layer) = layer_changed {
@@ -88,19 +88,19 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
 
         let cur_win_name = sway.current_application();
         if let None = cur_win_name {
-            log::warn!("No app focused!");
+            log::debug!("No app focused!");
 
             // Don't run the loop forever when no app is focused, fixes the overheat problem
             wait = true;
             continue;
         }
 
-        log::info!("CURRENT layer: {}", cur_layer);
+        log::trace!("Current layer: {}", cur_layer);
 
         // Don't change layer if in a whitelisted file
         if let Some(whitelist) = get_white_list() {
             if whitelist.contains(&cur_layer) {
-                log::warn!("---SKIPPING {}---", &cur_layer);
+                log::info!("Skipping {} because in whitelist", &cur_layer);
                 wait = true;
                 continue;
             }
@@ -108,10 +108,10 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
 
         let should_change = should_change_layer(cur_win_name.clone().unwrap());
         if should_change {
-            log::warn!("SHOULD CHANGE");
+            log::trace!("should change the layer");
             write_to_kanata(cur_win_name.unwrap(), &mut s);
         } else {
-            log::warn!("FALLBACK");
+            log::trace!("should not change the layer");
             // TODO: Extract to configuration
             let default_layer = String::from("main");
             write_to_kanata(default_layer, &mut s);
