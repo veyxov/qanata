@@ -5,14 +5,12 @@ import matplotlib.cm as cm
 import argparse
 from matplotlib.widgets import CheckButtons
 
-# Step 1: Save the provided data into a text file named "key_events.txt".
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--file", help="Specify the file path")
+    args = parser.parse_args()
 
-# Step 2: Read data from the file and process it.
-parser = argparse.ArgumentParser()
-parser.add_argument("--file", help="Specify the file path")
-args = parser.parse_args()
-
-if args.file:
+    if args.file:
     file_name = args.file
     # Now you can use the 'file_name' variable in your code.
     # Dictionary to store the count of each sent key and its layer
@@ -100,5 +98,9 @@ if args.file:
 
     plt.show()
 
-else:
+    else:
     print("No file provided\nPlease specify --file")
+
+
+if __name__ == "__main__":
+    main()
