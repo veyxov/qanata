@@ -1,4 +1,7 @@
 import shutil
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 
 def parse_data(line):
     parts = line.strip().split("|")
@@ -38,6 +41,33 @@ def calculate_statistics(data):
 
     return key_count, resulting_key_count, layer_count
 
+def plot_key_counts(key_count):
+    plt.figure(figsize=(10, 6))
+    sns.barplot(x=list(key_count.keys()), y=list(key_count.values()))
+    plt.xlabel("Actual Key")
+    plt.ylabel("Count")
+    plt.title("Key Counts")
+    plt.xticks(rotation=45)
+    plt.show()
+
+def plot_resulting_key_counts(resulting_key_count):
+    plt.figure(figsize=(10, 6))
+    sns.barplot(x=list(resulting_key_count.keys()), y=list(resulting_key_count.values()))
+    plt.xlabel("Resulting Key")
+    plt.ylabel("Count")
+    plt.title("Resulting Key Counts")
+    plt.xticks(rotation=45)
+    plt.show()
+
+def plot_layer_counts(layer_count):
+    plt.figure(figsize=(8, 6))
+    sns.barplot(x=list(layer_count.keys()), y=list(layer_count.values()))
+    plt.xlabel("Layer")
+    plt.ylabel("Count")
+    plt.title("Layer Counts")
+    plt.xticks(rotation=45)
+    plt.show()
+
 def main():
     file_path = "/home/iz/kanata.log"  # Replace with the path to your file
     backup_file_path = "/home/iz/kanata.log.backup"
@@ -70,6 +100,11 @@ def main():
     print("\nLayer counts:")
     for layer, count in layer_count.items():
         print(f"{layer}: {count}")
+
+    # Plot visualizations
+    plot_key_counts(key_count)
+    plot_resulting_key_counts(resulting_key_count)
+    plot_layer_counts(layer_count)
 
 if __name__ == "__main__":
     main()
