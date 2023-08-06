@@ -5,69 +5,40 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import matplotlib.widgets as widgets
 import pandas as pd
 
-def plot_keys_counts(key_count, key_type):
-    fig, ax = plt.subplots(figsize=(10, 6))
-    sns.barplot(x=list(key_count.keys()), y=list(key_count.values()), ax=ax)
-    ax.set_xlabel(f"{key_type} Key")
-    ax.set_ylabel("Count")
-    ax.set_title(f"{key_type} Key Counts")
-    plt.xticks(rotation=45)
-
-    def on_actual_keys_button_click(event):
-        update_plot(key_count, "Actual")
-
-    def on_sent_keys_button_click(event):
-        update_plot(resulting_key_count, "Sent")
-
-    ax_actual_keys = plt.axes([0.7, 0.03, 0.1, 0.05])
-    ax_sent_keys = plt.axes([0.81, 0.03, 0.1, 0.05])
-
-    actual_keys_button = widgets.Button(ax_actual_keys, "Actual Keys")
-    actual_keys_button.on_clicked(on_actual_keys_button_click)
-
-    sent_keys_button = widgets.Button(ax_sent_keys, "Sent Keys")
-    sent_keys_button.on_clicked(on_sent_keys_button_click)
-
-    plt.show()
-
-def update_plot(key_count, key_type):
-    fig, ax = plt.subplots(figsize=(10, 6))
-    sns.barplot(x=list(key_count.keys()), y=list(key_count.values()), ax=ax)
-    ax.set_xlabel(f"{key_type} Key")
-    ax.set_ylabel("Count")
-    ax.set_title(f"{key_type} Key Counts")
-    plt.xticks(rotation=45)
-    plt.show()
-
 def parse_data(line):
     parts = line.strip().split("|")
     if len(parts) == 3:
 
+        actual = parts[0].replace("KEY_", "")
         layer = parts[1]
+        press = parts[2].replace("KEY_", "")
+
+        act_parts = actual.split("+")
+        if len(act_parts) > 2:
+            actual = act_parts[0]
+
         # adaptive layers should be merged with main
         if layer.startswith("adaptive"):
             layer = "main"
 
         return {
-            "actual_key": parts[0],
+            "actual_key": actual,
             "layer": layer,
-            "resulting_key": parts[2],
+            "resulting_key": press,
         }
     else:
         return None
 
-def create_heatmap(resulting_key_count):
-    # Convert resulting_key_count to a DataFrame
-    df = pd.DataFrame(list(resulting_key_count.items()), columns=["Key", "Count"])
-
-    # Create a pivot table to reshape the DataFrame
-    df_pivot = df.pivot_table(index="Key", columns="Key", values="Count", fill_value=0)
-
-    # Create the heatmap
-    plt.figure(figsize=(12, 8))
-    sns.heatmap(df_pivot, annot=True, fmt="d", cmap="Blues")
-    plt.title("Keyboard Key Usage Heatmap (Sent Keys)")
+def create_bar_plot(data_df, title):
+    plt.figure(figsize=(12, 6))
+    sns.barplot(x="key", y="count", data=data_df)
+    plt.title(title)
+    plt.xlabel("Keys")
+    plt.ylabel("Count")
+    plt.xticks(rotation=45, ha="right")
+    plt.tight_layout()
     plt.show()
+
 
 def calculate_statistics(data):
     # Count the occurrences of each actual key
@@ -89,33 +60,6 @@ def calculate_statistics(data):
         layer_count[layer] = layer_count.get(layer, 0) + 1
 
     return key_count, resulting_key_count, layer_count
-
-def plot_key_counts(key_count):
-    plt.figure(figsize=(10, 6))
-    sns.barplot(x=list(key_count.keys()), y=list(key_count.values()))
-    plt.xlabel("Actual Key")
-    plt.ylabel("Count")
-    plt.title("Key Counts")
-    plt.xticks(rotation=45)
-    plt.show()
-
-def plot_resulting_key_counts(resulting_key_count):
-    plt.figure(figsize=(10, 6))
-    sns.barplot(x=list(resulting_key_count.keys()), y=list(resulting_key_count.values()))
-    plt.xlabel("Resulting Key")
-    plt.ylabel("Count")
-    plt.title("Resulting Key Counts")
-    plt.xticks(rotation=45)
-    plt.show()
-
-def plot_layer_counts(layer_count):
-    plt.figure(figsize=(8, 6))
-    sns.barplot(x=list(layer_count.keys()), y=list(layer_count.values()))
-    plt.xlabel("Layer")
-    plt.ylabel("Count")
-    plt.title("Layer Counts")
-    plt.xticks(rotation=45)
-    plt.show()
 
 
 def main():
@@ -151,8 +95,16 @@ def main():
     for layer, count in layer_count.items():
         print(f"{layer}: {count}")
 
-    # Plot interactive visualization with buttons
-    create_heatmap(resulting_key_count)
+        # Create DataFrames from the key_count and resulting_key_count dictionaries and sort by count
+    #key_count_df = pd.DataFrame(list(key_count.items()), columns=["key", "count"])
+    #key_count_df = key_count_df.sort_values(by="count", ascending=False)
+
+    resulting_key_count_df = pd.DataFrame(list(resulting_key_count.items()), columns=["key", "count"])
+    resulting_key_count_df = resulting_key_count_df.sort_values(by="count", ascending=False)
+
+
+    create_bar_plot(resulting_key_count_df, "Keyboard Statistics: Resulting Keys Sent")
+
 
 
 if __name__ == "__main__":
