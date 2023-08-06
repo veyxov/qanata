@@ -3,9 +3,15 @@ import shutil
 def parse_data(line):
     parts = line.strip().split("|")
     if len(parts) == 3:
+
+        layer = parts[1]
+        # adaptive layers should be merged with main
+        if layer.startswith("adaptive"):
+            layer = "main"
+
         return {
             "actual_key": parts[0],
-            "layer": parts[1],
+            "layer": layer,
             "resulting_key": parts[2],
         }
     else:
