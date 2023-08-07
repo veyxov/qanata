@@ -25,12 +25,14 @@ pub mod overlay {
         let ttf_context = sdl2::ttf::init().unwrap();
         let font_path = "/usr/share/fonts/TTF/IBMPlexSansHebrew-Bold.ttf";
         // Replace this with the actual path to your TTF font file
-        let font_size = 36;
+        let font_size = 12;
         let font = ttf_context.load_font(font_path, font_size).unwrap();
         let text_color = Color::RGB(255, 255, 255);
 
         // Main loop
         let mut event_pump = sdl_context.event_pump().unwrap();
+        let mut current_layer = String::from("main"); // TODO: Optimize this, global app wide, lazy-static
+                                        // variable for this?
         'running: loop {
             // Handle events
             for event in event_pump.poll_iter() {
@@ -51,17 +53,16 @@ pub mod overlay {
 
             // Returns ok when there is a layer change
             // Error if nothing changed
-            let mut random_string = format!("Random number: {}", rand::random::<u32>());
             if let Ok(new_layer) = layer_changed {
                 log::error!(
                     "Received layer change SIGNAL: {}",
                     new_layer
                 );
 
-                random_string = new_layer;
+                current_layer = new_layer
             }
 
-            let text_surface = font.render(&random_string).blended(text_color).unwrap();
+            let text_surface = font.render(&current_layer).blended(text_color).unwrap();
             let binding = canvas.texture_creator();
             let text_texture = binding.create_texture_from_surface(&text_surface).unwrap();
 
@@ -71,8 +72,8 @@ pub mod overlay {
 
             // Render text overlay
             let texture_query = text_texture.query();
-            let x = (800 - texture_query.width) as i32 / 2;
-            let y = (600 - texture_query.height) as i32 / 2;
+            let x = 0;
+            let y = 0;
 
             canvas
                 .copy(
@@ -86,7 +87,7 @@ pub mod overlay {
             canvas.present();
 
             // Add a small delay to control the frame rate
-            std::thread::sleep(Duration::from_millis(500));
+            std::thread::sleep(Duration::from_millis(100));
         }
     }
 }
