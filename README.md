@@ -1,7 +1,11 @@
 # Application aware layer switching 🔁 with [kanata](https://github.com/jtroo/kanata/) ⌨️ and [sway](https://github.com/swaywm/sway) 💨
 
 ## Additional features:
-- Current layer text overlay
+### Current layer text overlay
+- Using sdl2 for rendering just text, is overkill
+- [ ] Find a more lightweight alternative
+- Is there any better way of showing current-layer information? 
+- [ ] Maybe some sway prompt using ipc?
 
 ## TODO 📔
 - [ ] Configuration
