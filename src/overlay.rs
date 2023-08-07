@@ -46,7 +46,21 @@ pub mod overlay {
 
             // Create the text surface and texture
             // generate a random string
-            let random_string = format!("Random number: {}", rand::random::<u32>());
+
+            let layer_changed = rec.lock().unwrap().recv();
+
+            // Returns ok when there is a layer change
+            // Error if nothing changed
+            let mut random_string = format!("Random number: {}", rand::random::<u32>());
+            if let Ok(new_layer) = layer_changed {
+                log::error!(
+                    "Received layer change SIGNAL: {}",
+                    new_layer
+                );
+
+                random_string = new_layer;
+            }
+
             let text_surface = font.render(&random_string).blended(text_color).unwrap();
             let binding = canvas.texture_creator();
             let text_texture = binding.create_texture_from_surface(&text_surface).unwrap();
