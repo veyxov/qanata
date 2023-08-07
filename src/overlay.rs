@@ -1,11 +1,13 @@
 pub mod overlay {
     extern crate sdl2;
+    use crossbeam::channel::Receiver;
     use sdl2::event::Event;
     use sdl2::keyboard::Keycode;
     use sdl2::pixels::Color;
+    use std::sync::{Arc, Mutex};
     use std::time::Duration;
 
-    pub(crate) fn render_ovrelay() {
+    pub(crate) fn render_ovrelay(rec: Arc<Mutex<Receiver<String>>>) {
         // Initialize SDL2
         let sdl_context = sdl2::init().unwrap();
         let video_subsystem = sdl_context.video().unwrap();

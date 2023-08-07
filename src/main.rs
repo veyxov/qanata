@@ -1,6 +1,7 @@
 use crossbeam::channel::{unbounded, Receiver, Sender};
 use glob::glob;
 use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex};
 use std::{str, thread};
 
 use std::io::{Read, Write};
@@ -12,9 +13,9 @@ use crate::sway_ipc_connection::Sway;
 use crate::whitelist::get_white_list;
 
 mod app_init;
+mod overlay;
 mod sway_ipc_connection;
 pub mod whitelist;
-mod overlay;
 
 fn main() {
     let (kanata_conn, sway_conn) = app_init::init();
@@ -28,13 +29,20 @@ fn main() {
             // Used to send the current layout from `kanata_reader` to `kanata_writer`
             // When telling kanata to change layout there are some checks for the current layout (unstable)
             let (sender, receiver) = unbounded::<String>();
+
+            let receiver = Arc::new(Mutex::new(receiver));
+
+            let rx1 = receiver.clone();
+            let rx2 = receiver.clone();
+
             thread::spawn(move || read_from_kanata(reader_stream, sender));
 
             match sway_conn {
                 Ok(sway) => {
-                    thread::spawn(|| overlay::overlay::render_ovrelay());
-                    main_loop(writer_stream, sway, receiver);
-                },
+                    // TODO: Opt-out with config
+                    thread::spawn(|| overlay::overlay::render_ovrelay(rx1));
+                    main_loop(writer_stream, sway, rx2);
+                }
                 Err(e) => {
                     log::error!("Cannot connect to sway: {}", e);
                 }
@@ -64,7 +72,7 @@ impl FromStr for ServerMessage {
     }
 }
 
-fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
+fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Arc<Mutex<Receiver<String>>>) {
     let mut cur_layer = String::from("main");
 
     let mut wait: bool = false;
@@ -73,7 +81,7 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
             // Sleep for 1.5 seconds to prevent overheat
             std::thread::sleep(Duration::from_millis(1500));
         }
-        let layer_changed = receiver.recv();
+        let layer_changed = receiver.lock().unwrap().recv();
 
         // Returns ok when there is a layer change
         // Error if nothing changed
@@ -175,4 +183,3 @@ fn read_from_kanata(mut s: TcpStream, sender: Sender<String>) {
         }
     }
 }
-
