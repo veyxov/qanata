@@ -1,79 +1,178 @@
-extern crate sdl2;
+use crossbeam::channel::{unbounded, Receiver, Sender};
+use glob::glob;
+use serde::{Deserialize, Serialize};
+use std::{str, thread};
 
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
-use sdl2::pixels::Color;
+use std::io::{Read, Write};
+use std::net::TcpStream;
+use std::str::FromStr;
 use std::time::Duration;
 
+use crate::sway_ipc_connection::Sway;
+use crate::whitelist::get_white_list;
+
+mod app_init;
+mod sway_ipc_connection;
+pub mod whitelist;
+mod overlay;
+
 fn main() {
-    render_ovrelay();
+    let (kanata_conn, sway_conn) = app_init::init();
+
+    match kanata_conn {
+        Ok(kanata) => {
+            let writer_stream = kanata.try_clone().expect("clone writer");
+            let reader_stream = kanata;
+
+            // Async cross-channel cammunication
+            // Used to send the current layout from `kanata_reader` to `kanata_writer`
+            // When telling kanata to change layout there are some checks for the current layout (unstable)
+            let (sender, receiver) = unbounded::<String>();
+            thread::spawn(move || read_from_kanata(reader_stream, sender));
+
+            match sway_conn {
+                Ok(sway) => {
+                    thread::spawn(|| overlay::overlay::render_ovrelay());
+                    main_loop(writer_stream, sway, receiver);
+                },
+                Err(e) => {
+                    log::error!("Cannot connect to sway: {}", e);
+                }
+            }
+        }
+        Err(e) => {
+            log::error!("Cannot connect to kanata: {}", e);
+        }
+    }
 }
 
-fn render_ovrelay() {
-    // Initialize SDL2
-    let sdl_context = sdl2::init().unwrap();
-    let video_subsystem = sdl_context.video().unwrap();
+#[derive(Debug, Serialize, Deserialize)]
+pub enum ServerMessage {
+    LayerChange { new: String },
+}
 
-    // Create a window
-    let window = video_subsystem
-        .window("Text Overlay", 200, 100)
-        .build()
-        .unwrap();
+#[derive(Debug, Serialize, Deserialize)]
+pub enum ClientMessage {
+    ChangeLayer { new: String },
+}
 
-    // Create a rendering context
-    let mut canvas = window.into_canvas().build().unwrap();
+impl FromStr for ServerMessage {
+    type Err = serde_json::Error;
 
-    // Set up the text properties
-    let ttf_context = sdl2::ttf::init().unwrap();
-    let font_path = "/usr/share/fonts/TTF/IBMPlexSansHebrew-Bold.ttf";
-    // Replace this with the actual path to your TTF font file
-    let font_size = 36;
-    let font = ttf_context.load_font(font_path, font_size).unwrap();
-    let text_color = Color::RGB(255, 255, 255);
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        serde_json::from_str(s)
+    }
+}
 
-    // Main loop
-    let mut event_pump = sdl_context.event_pump().unwrap();
-    'running: loop {
-        // Handle events
-        for event in event_pump.poll_iter() {
-            match event {
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => break 'running,
-                _ => {}
+fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Receiver<String>) {
+    let mut cur_layer = String::from("main");
+
+    let mut wait: bool = false;
+    loop {
+        if wait {
+            // Sleep for 1.5 seconds to prevent overheat
+            std::thread::sleep(Duration::from_millis(1500));
+        }
+        let layer_changed = receiver.recv();
+
+        // Returns ok when there is a layer change
+        // Error if nothing changed
+        if let Ok(new_layer) = layer_changed {
+            log::warn!(
+                "Received layer change SIGNAL: {} -> {}",
+                cur_layer,
+                new_layer
+            );
+            cur_layer = new_layer;
+
+            wait = false;
+        }
+
+        let cur_win_name = sway.current_application();
+        if let None = cur_win_name {
+            log::debug!("No app focused!");
+
+            // Don't run the loop forever when no app is focused, fixes the overheat problem
+            wait = true;
+            continue;
+        }
+
+        log::trace!("Current layer: {}", cur_layer);
+
+        // Don't change layer if in a whitelisted file
+        if let Some(whitelist) = get_white_list() {
+            if whitelist.contains(&cur_layer) {
+                log::info!("Skipping {} because in whitelist", &cur_layer);
+                wait = true;
+                continue;
             }
         }
 
-        // Create the text surface and texture
-        // generate a random string
-        let random_string = format!("Random number: {}", rand::random::<u32>());
-        let text_surface = font.render(&random_string).blended(text_color).unwrap();
-        let binding = canvas.texture_creator();
-        let text_texture = binding.create_texture_from_surface(&text_surface).unwrap();
+        let should_change = should_change_layer(cur_win_name.clone().unwrap());
+        if should_change {
+            log::trace!("should change the layer");
+            write_to_kanata(cur_win_name.unwrap(), &mut s);
+        } else {
+            log::trace!("should not change the layer");
+            // TODO: Extract to configuration
+            let default_layer = String::from("main");
+            write_to_kanata(default_layer, &mut s);
+        }
 
-        // Clear the canvas
-        canvas.set_draw_color(Color::RGB(0, 0, 0));
-        canvas.clear();
-
-        // Render text overlay
-        let texture_query = text_texture.query();
-        let x = (800 - texture_query.width) as i32 / 2;
-        let y = (600 - texture_query.height) as i32 / 2;
-
-        canvas
-            .copy(
-                &text_texture,
-                None,
-                sdl2::rect::Rect::new(x, y, texture_query.width, texture_query.height),
-            )
-            .unwrap();
-
-        // Update the screen
-        canvas.present();
-
-        // Add a small delay to control the frame rate
-        std::thread::sleep(Duration::from_millis(500));
+        std::thread::sleep(Duration::from_millis(1500));
     }
 }
+
+fn should_change_layer(cur_win_name: String) -> bool {
+    // PERF: Early exit, when found or cache on startup, which creates reload problems
+    // TODO: Make the files path configurable
+    let file_names: Vec<String> = glob("/home/iz/.config/keyboard/apps/*")
+        .expect("Failed to read glob pattern")
+        .into_iter()
+        .map(|e| {
+            let val = e
+                .expect("glob element")
+                .file_name()
+                .expect("file name")
+                .to_str()
+                .unwrap()
+                .to_owned();
+
+            log::debug!("File found: {}", val);
+            val
+        })
+        .collect();
+
+    return file_names.contains(&cur_win_name);
+}
+
+fn write_to_kanata(new: String, s: &mut TcpStream) {
+    log::info!("writer: telling kanata to change layer to \"{new}\"");
+
+    let msg = serde_json::to_string(&ClientMessage::ChangeLayer { new }).expect("deserializable");
+    let expected_wsz = msg.len();
+
+    let wsz = s.write(msg.as_bytes()).expect("stream writable");
+    if wsz != expected_wsz {
+        panic!("failed to write entire message {wsz} {expected_wsz}");
+    }
+}
+
+fn read_from_kanata(mut s: TcpStream, sender: Sender<String>) {
+    log::info!("reader starting");
+    let mut buf = vec![0; 256];
+    loop {
+        let sz = s.read(&mut buf).expect("stream readable");
+        let msg = String::from_utf8_lossy(&buf[..sz]);
+        let parsed_msg = ServerMessage::from_str(&msg).expect("kanata sends valid message");
+        match parsed_msg {
+            ServerMessage::LayerChange { new } => {
+                log::info!("reader: KANATA CHANGED layers to \"{}\"", new);
+                sender
+                    .send(new.clone())
+                    .expect("send layer change to other proccess");
+            }
+        }
+    }
+}
+
