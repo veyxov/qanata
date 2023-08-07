@@ -15,3 +15,8 @@ serde_json = "1"
 swayipc = { version = "3.0.1" }
 glob = "0.3.1"
 crossbeam = "0.8.2"
+
+[dependencies.sdl2]
+version = "*"
+default-features = false
+features = ["ttf"]
