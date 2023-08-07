@@ -1,5 +1,8 @@
 # Application aware layer switching 🔁 with [kanata](https://github.com/jtroo/kanata/) ⌨️ and [sway](https://github.com/swaywm/sway) 💨
 
+## Additional features:
+- Current layer text overlay
+
 ## TODO 📔
 - [ ] Configuration
     - [ ] List of registered apps that have specific layers
@@ -12,6 +15,8 @@
     - [x] Now using swayipc
     - [ ] Make it work on other than sway?
 - [x] Whitelist/blacklist
+- [ ] Make the overlay a compile time feature
+- [ ] Fork kanata and apply the logging patches
 
 ## How it works ⚙️
 1. You have a `main` layer, this will be used by default.
@@ -24,6 +29,9 @@ NOTE: If it can't find the corresponding file in `/apps` it fallbacks to the def
     - NOTE: The name of the file should match what sway returns
 
 ## Check out my [kanata config](https://github.com/veyxov/dots/tree/main/.config/keyboard) for reference 💡
+
+# Dependencies
+- SDL2 for the overlay window, optional (todo)
 
 ## How to run 🏃
 ```sh
@@ -40,9 +48,6 @@ cargo run -- --port 7070
 
 # Current format: actual_key_presses|layer|resulting_key_press
 ```
-## TODO:
-- [ ] Fork kanata and apply the logging patches
-
 ---
 
 ## Bugs 🐞
