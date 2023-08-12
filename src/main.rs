@@ -107,9 +107,9 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Arc<Mutex<Receiver<Stri
 
         log::trace!("Current layer: {}", cur_layer);
 
-        // Don't change layer if in a whitelisted file
+        // Don't change layer if not in a whitelisted file
         if let Some(whitelist) = get_white_list() {
-            if whitelist.contains(&cur_layer) {
+            if !whitelist.contains(&cur_layer) {
                 log::info!("Skipping {} because in whitelist", &cur_layer);
                 wait = true;
                 continue;
