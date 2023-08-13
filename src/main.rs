@@ -31,17 +31,21 @@ fn main() {
             let (sender, receiver) = unbounded::<String>();
 
             let receiver = Arc::new(Mutex::new(receiver));
+            let sender = Arc::new(Mutex::new(sender));
 
             let rx1 = receiver.clone();
             let rx2 = receiver.clone();
 
-            thread::spawn(move || read_from_kanata(reader_stream, sender));
+            let sx1 = sender.clone();
+            let sx2 = sender.clone();
+
+            thread::spawn(move || read_from_kanata(reader_stream, sx1));
 
             match sway_conn {
                 Ok(sway) => {
                     // TODO: Opt-out with config
                     thread::spawn(|| overlay::overlay::render_ovrelay(rx1));
-                    main_loop(writer_stream, sway, rx2);
+                    main_loop(writer_stream, sway, rx2, sx2);
                 }
                 Err(e) => {
                     log::error!("Cannot connect to sway: {}", e);
@@ -72,7 +76,7 @@ impl FromStr for ServerMessage {
     }
 }
 
-fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Arc<Mutex<Receiver<String>>>) {
+fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Arc<Mutex<Receiver<String>>>, sender: Arc<Mutex<Sender<String>>>) {
     let mut cur_layer = String::from("main");
 
     let mut wait: bool = false;
@@ -97,6 +101,7 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Arc<Mutex<Receiver<Stri
         }
 
         let cur_win_name = sway.current_application();
+        log::info!("Current app: {:?}", cur_win_name);
         if let None = cur_win_name {
             log::debug!("No app focused!");
 
@@ -110,7 +115,7 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Arc<Mutex<Receiver<Stri
         // Don't change layer if not in a whitelisted file
         if let Some(whitelist) = get_white_list() {
             if !whitelist.contains(&cur_layer) {
-                log::info!("Skipping {} because in whitelist", &cur_layer);
+                log::info!("Skipping {} because not in whitelist", &cur_layer);
                 wait = true;
                 continue;
             }
@@ -119,12 +124,12 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Arc<Mutex<Receiver<Stri
         let should_change = should_change_layer(cur_win_name.clone().unwrap());
         if should_change {
             log::trace!("should change the layer");
-            write_to_kanata(cur_win_name.unwrap(), &mut s);
+            write_to_kanata(cur_win_name.unwrap(), &mut s, sender.clone());
         } else {
             log::trace!("should not change the layer");
             // TODO: Extract to configuration
             let default_layer = String::from("main");
-            write_to_kanata(default_layer, &mut s);
+            write_to_kanata(default_layer, &mut s, sender.clone());
         }
 
         std::thread::sleep(Duration::from_millis(1500));
@@ -154,8 +159,9 @@ fn should_change_layer(cur_win_name: String) -> bool {
     return file_names.contains(&cur_win_name);
 }
 
-fn write_to_kanata(new: String, s: &mut TcpStream) {
+fn write_to_kanata(new: String, s: &mut TcpStream, sender: Arc<Mutex<Sender<String>>>) {
     log::info!("writer: telling kanata to change layer to \"{new}\"");
+    sender.lock().unwrap().send(new.clone()).expect("send to reader");
 
     let msg = serde_json::to_string(&ClientMessage::ChangeLayer { new }).expect("deserializable");
     let expected_wsz = msg.len();
@@ -166,7 +172,7 @@ fn write_to_kanata(new: String, s: &mut TcpStream) {
     }
 }
 
-fn read_from_kanata(mut s: TcpStream, sender: Sender<String>) {
+fn read_from_kanata(mut s: TcpStream, sender: Arc<Mutex<Sender<String>>>) {
     log::info!("reader starting");
     let mut buf = vec![0; 256];
     loop {
@@ -177,6 +183,7 @@ fn read_from_kanata(mut s: TcpStream, sender: Sender<String>) {
             ServerMessage::LayerChange { new } => {
                 log::info!("reader: KANATA CHANGED layers to \"{}\"", new);
                 sender
+                    .lock().expect("lock sender")
                     .send(new.clone())
                     .expect("send layer change to other proccess");
             }

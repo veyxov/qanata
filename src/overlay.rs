@@ -54,11 +54,6 @@ pub mod overlay {
             // Returns ok when there is a layer change
             // Error if nothing changed
             if let Ok(new_layer) = layer_changed {
-                log::error!(
-                    "Received layer change SIGNAL: {}",
-                    new_layer
-                );
-
                 current_layer = new_layer
             }
 
