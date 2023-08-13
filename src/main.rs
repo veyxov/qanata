@@ -2,7 +2,7 @@ use crossbeam::channel::{unbounded, Receiver, Sender};
 use glob::glob;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
-use std::{str, thread};
+use std::{str, thread, time};
 
 use std::io::{Read, Write};
 use std::net::TcpStream;
@@ -81,11 +81,14 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Arc<Mutex<Receiver<Stri
 
     let mut wait: bool = false;
     loop {
+        log::warn!("Current time: {:?}", time::Instant::now());
         if wait {
             // Sleep for 1.5 seconds to prevent overheat
-            std::thread::sleep(Duration::from_millis(1500));
+            std::thread::sleep(Duration::from_millis(101));
         }
-        let layer_changed = receiver.lock().unwrap().recv();
+
+        let layer_changed = receiver.lock().unwrap().try_recv();
+        log::warn!("rsnd");
 
         // Returns ok when there is a layer change
         // Error if nothing changed
@@ -131,8 +134,6 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Arc<Mutex<Receiver<Stri
             let default_layer = String::from("main");
             write_to_kanata(default_layer, &mut s, sender.clone());
         }
-
-        std::thread::sleep(Duration::from_millis(1500));
     }
 }
 
