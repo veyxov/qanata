@@ -74,6 +74,7 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Arc<Mutex<Receiver<Stri
     let mut wait: bool = false;
     loop {
         log::warn!("Current time: {:?}", time::Instant::now());
+                std::thread::sleep(Duration::from_millis(101));
         if wait {
             // Sleep for 1.5 seconds to prevent overheat
             std::thread::sleep(Duration::from_millis(101));
