@@ -4,9 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use std::{str, thread, time};
 
-use std::io::{Read, Write};
 use std::net::TcpStream;
-use std::str::FromStr;
 use std::time::Duration;
 
 use crate::sway_ipc_connection::Sway;
@@ -15,6 +13,8 @@ use crate::whitelist::get_white_list;
 mod app_init;
 mod overlay;
 mod sway_ipc_connection;
+mod kanata_io;
+
 pub mod whitelist;
 
 fn main() {
@@ -39,7 +39,7 @@ fn main() {
             let sx1 = sender.clone();
             let sx2 = sender.clone();
 
-            thread::spawn(move || read_from_kanata(reader_stream, sx1));
+            thread::spawn(move || kanata_io::read_from_kanata(reader_stream, sx1));
 
             match sway_conn {
                 Ok(sway) => {
@@ -66,14 +66,6 @@ pub enum ServerMessage {
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ClientMessage {
     ChangeLayer { new: String },
-}
-
-impl FromStr for ServerMessage {
-    type Err = serde_json::Error;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        serde_json::from_str(s)
-    }
 }
 
 fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Arc<Mutex<Receiver<String>>>, sender: Arc<Mutex<Sender<String>>>) {
@@ -127,12 +119,12 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Arc<Mutex<Receiver<Stri
         let should_change = should_change_layer(cur_win_name.clone().unwrap());
         if should_change {
             log::trace!("should change the layer");
-            write_to_kanata(cur_win_name.unwrap(), &mut s, sender.clone());
+            kanata_io::write_to_kanata(cur_win_name.unwrap(), &mut s, sender.clone());
         } else {
             log::trace!("should not change the layer");
             // TODO: Extract to configuration
             let default_layer = String::from("main");
-            write_to_kanata(default_layer, &mut s, sender.clone());
+            kanata_io::write_to_kanata(default_layer, &mut s, sender.clone());
         }
     }
 }
@@ -158,36 +150,4 @@ fn should_change_layer(cur_win_name: String) -> bool {
         .collect();
 
     return file_names.contains(&cur_win_name);
-}
-
-fn write_to_kanata(new: String, s: &mut TcpStream, sender: Arc<Mutex<Sender<String>>>) {
-    log::info!("writer: telling kanata to change layer to \"{new}\"");
-    sender.lock().unwrap().send(new.clone()).expect("send to reader");
-
-    let msg = serde_json::to_string(&ClientMessage::ChangeLayer { new }).expect("deserializable");
-    let expected_wsz = msg.len();
-
-    let wsz = s.write(msg.as_bytes()).expect("stream writable");
-    if wsz != expected_wsz {
-        panic!("failed to write entire message {wsz} {expected_wsz}");
-    }
-}
-
-fn read_from_kanata(mut s: TcpStream, sender: Arc<Mutex<Sender<String>>>) {
-    log::info!("reader starting");
-    let mut buf = vec![0; 256];
-    loop {
-        let sz = s.read(&mut buf).expect("stream readable");
-        let msg = String::from_utf8_lossy(&buf[..sz]);
-        let parsed_msg = ServerMessage::from_str(&msg).expect("kanata sends valid message");
-        match parsed_msg {
-            ServerMessage::LayerChange { new } => {
-                log::info!("reader: KANATA CHANGED layers to \"{}\"", new);
-                sender
-                    .lock().expect("lock sender")
-                    .send(new.clone())
-                    .expect("send layer change to other proccess");
-            }
-        }
-    }
 }
