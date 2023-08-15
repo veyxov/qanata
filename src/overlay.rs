@@ -1,3 +1,4 @@
+#[cfg(feature = "overlay")]
 pub mod overlay {
     extern crate sdl2;
     use crossbeam::channel::Receiver;

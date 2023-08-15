@@ -33,9 +33,6 @@ fn main() {
             let receiver = Arc::new(Mutex::new(receiver));
             let sender = Arc::new(Mutex::new(sender));
 
-            let rx1 = receiver.clone();
-            let rx2 = receiver.clone();
-
             let sx1 = sender.clone();
             let sx2 = sender.clone();
 
@@ -43,8 +40,12 @@ fn main() {
 
             match sway_conn {
                 Ok(sway) => {
-                    // TODO: Opt-out with config
+                    #[cfg(feature = "overlay")]
+                    let rx1 = receiver.clone();
+                    #[cfg(feature = "overlay")]
                     thread::spawn(|| overlay::overlay::render_ovrelay(rx1));
+
+                    let rx2 = receiver.clone();
                     main_loop(writer_stream, sway, rx2, sx2);
                 }
                 Err(e) => {
