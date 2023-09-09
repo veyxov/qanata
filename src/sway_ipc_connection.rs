@@ -4,8 +4,8 @@ use std::{env, fs::read_dir, os::unix::prelude::OsStrExt};
 
 fn find_socket() -> Option<String> {
     let uid = 1000;
-    if let Some(run_user) = read_dir(format!("/run/user/{}", uid)).as_mut().ok() {
-        while let Some(entry) = run_user.next() {
+    if let Ok(run_user) = read_dir(format!("/run/user/{}", uid)).as_mut() {
+        for entry in run_user.by_ref() {
             let path = entry.ok()?.path();
             if let Some(fname) = path.file_name() {
                 if fname.as_bytes().starts_with(b"sway-ipc.") {
