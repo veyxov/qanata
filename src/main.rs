@@ -99,7 +99,7 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Arc<Mutex<Receiver<Stri
 
         let cur_win_name = sway.current_application();
         log::info!("Current app: {:?}", cur_win_name);
-        if let None = cur_win_name {
+        if cur_win_name.is_none() {
             log::debug!("No app focused!");
 
             // Don't run the loop forever when no app is focused, fixes the overheat problem
@@ -136,7 +136,6 @@ fn should_change_layer(cur_win_name: String) -> bool {
     // TODO: Make the files path configurable
     let file_names: Vec<String> = glob("/home/iz/.config/keyboard/apps/*")
         .expect("Failed to read glob pattern")
-        .into_iter()
         .map(|e| {
             let val = e
                 .expect("glob element")
@@ -151,5 +150,5 @@ fn should_change_layer(cur_win_name: String) -> bool {
         })
         .collect();
 
-    return file_names.contains(&cur_win_name);
+    file_names.contains(&cur_win_name)
 }
