@@ -29,7 +29,7 @@ impl Sway {
     }
 
     pub(crate) fn connect(&mut self) {
-        if let None = self.connection {
+        if self.connection.is_none() {
             if let Err(env::VarError::NotPresent) = env::var("SWAYSOCK") {
                 let path = match find_socket() {
                     Some(path) => path,
