@@ -27,7 +27,7 @@ pub(crate) fn get_white_list() -> Option<Vec<String>> {
                     log::debug!("- {}", line);
                 }
 
-                return Some(lines);
+                Some(lines)
             }
             Err(e) => {
                 log::error!("error reading file: {}", e);
@@ -36,6 +36,7 @@ pub(crate) fn get_white_list() -> Option<Vec<String>> {
         }
     } else {
         log::debug!("no whitelist");
-        return None;
+
+        None
     }
 }
