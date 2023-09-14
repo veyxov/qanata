@@ -11,9 +11,9 @@ use crate::sway_ipc_connection::Sway;
 use crate::whitelist::get_white_list;
 
 mod app_init;
+mod kanata_io;
 mod overlay;
 mod sway_ipc_connection;
-mod kanata_io;
 
 pub mod whitelist;
 
@@ -69,16 +69,20 @@ pub enum ClientMessage {
     ChangeLayer { new: String },
 }
 
-fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Arc<Mutex<Receiver<String>>>, sender: Arc<Mutex<Sender<String>>>) {
+fn main_loop(
+    mut s: TcpStream,
+    mut sway: Sway,
+    receiver: Arc<Mutex<Receiver<String>>>,
+    sender: Arc<Mutex<Sender<String>>>,
+) {
     let mut cur_layer = String::from("main");
 
     let mut wait: bool = false;
     loop {
-        log::warn!("Current time: {:?}", time::Instant::now());
-                std::thread::sleep(Duration::from_millis(101));
+        std::thread::sleep(Duration::from_millis(101));
         if wait {
             // Sleep for 1.5 seconds to prevent overheat
-            std::thread::sleep(Duration::from_millis(101));
+            std::thread::sleep(Duration::from_millis(1010));
         }
 
         let layer_changed = receiver.lock().unwrap().try_recv();
@@ -100,10 +104,9 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Arc<Mutex<Receiver<Stri
         let cur_win_name = sway.current_application();
         log::info!("Current app: {:?}", cur_win_name);
         if cur_win_name.is_none() {
-            log::debug!("No app focused!");
-
             // Don't run the loop forever when no app is focused, fixes the overheat problem
             wait = true;
+            log::warn!("Stopping becase of no app focused");
             continue;
         }
 
@@ -112,8 +115,8 @@ fn main_loop(mut s: TcpStream, mut sway: Sway, receiver: Arc<Mutex<Receiver<Stri
         // Don't change layer if not in a whitelisted file
         if let Some(whitelist) = get_white_list() {
             if !whitelist.contains(&cur_layer) {
-                log::info!("Skipping {} because not in whitelist", &cur_layer);
                 wait = true;
+                log::warn!("Skipping {} because not in whitelist", &cur_layer);
                 continue;
             }
         }
