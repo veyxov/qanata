@@ -23,7 +23,11 @@ impl FromStr for ServerMessage {
 
 pub fn write_to_kanata(new: String, s: &mut TcpStream, sender: Arc<Mutex<Sender<String>>>) {
     log::info!("writer: telling kanata to change layer to \"{new}\"");
-    sender.lock().unwrap().send(new.clone()).expect("send to reader");
+    sender
+        .lock()
+        .unwrap()
+        .send(new.clone())
+        .expect("send to reader");
 
     let msg = serde_json::to_string(&ClientMessage::ChangeLayer { new }).expect("deserializable");
     let expected_wsz = msg.len();
@@ -45,11 +49,11 @@ pub fn read_from_kanata(mut s: TcpStream, sender: Arc<Mutex<Sender<String>>>) {
             ServerMessage::LayerChange { new } => {
                 log::info!("reader: KANATA CHANGED layers to \"{}\"", new);
                 sender
-                    .lock().expect("lock sender")
+                    .lock()
+                    .expect("lock sender")
                     .send(new.clone())
                     .expect("send layer change to other proccess");
             }
         }
     }
 }
-

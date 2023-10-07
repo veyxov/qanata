@@ -2,7 +2,7 @@ use crossbeam::channel::{unbounded, Receiver, Sender};
 use glob::glob;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
-use std::{str, thread, time};
+use std::{str, thread};
 
 use std::net::TcpStream;
 use std::time::Duration;

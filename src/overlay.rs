@@ -33,7 +33,7 @@ pub mod overlay {
         // Main loop
         let mut event_pump = sdl_context.event_pump().unwrap();
         let mut current_layer = String::from("main"); // TODO: Optimize this, global app wide, lazy-static
-                                        // variable for this?
+                                                      // variable for this?
         'running: loop {
             // Handle events
             for event in event_pump.poll_iter() {
