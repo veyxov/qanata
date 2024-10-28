@@ -34,15 +34,26 @@ NOTE: If it can't find the corresponding file in `/apps` it fallbacks to the def
 
 ## Check out my [kanata config](https://github.com/veyxov/dots/tree/main/keyboard/.config/keyboard) for reference 💡
 
-# Dependencies
+# Development
+## Using Cargo
+Dependencies:
 - SDL2 for the overlay window, optional (todo)
 
-## How to run 🏃
 ```sh
 git clone https://github.com/veyxov/qanata
 cd qanata/
 cargo run -- --port 7070
 ```
+
+## Using Nix
+You can use the provided [`flake.nix`](./flake.nix) to setup all build- and run-time dependencies:
+
+1. Enable [Flakes](https://wiki.nixos.org/wiki/Flakes) in your Nix configuration.
+1. Add [`direnv`](https://direnv.net/) to your profile:
+   `nix profile install nixpkgs#direnv`
+1. `cd` into the directory where you have cloned this directory.
+1. Allow use of [`.envrc`](./.envrc): `direnv allow`
+1. After the dependencies have been installed, your shell will now have all of the necessary development dependencies.
 
 # Visualize statistics generated from kanata
 #### python script for generating heatmap for key presses
