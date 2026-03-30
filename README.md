@@ -1,72 +1,72 @@
-# Application aware layer switching 🔁 with [kanata](https://github.com/jtroo/kanata/) ⌨️ and [sway](https://github.com/swaywm/sway) 💨
+# qanata
 
-## Additional features:
-### Current layer text overlay
-- Using sdl2 for rendering just text, is overkill
-- [ ] Find a more lightweight alternative
-- Is there any better way of showing current-layer information? 
-- [ ] Maybe some sway prompt using ipc?
+Application-aware layer switching for [kanata](https://github.com/jtroo/kanata) on [sway](https://github.com/swaywm/sway).
 
-## TODO 📔
-- [ ] Configuration
-    - [ ] List of registered apps that have specific layers
-        - [x] Currently getting from file system (`~/.config/keyboard/apps/*`)
-        - [ ] Get from config file?
-    - [ ] Aliases and patterns for application names
+qanata watches the focused sway window and tells kanata which layer to use.
 
-- [ ] Refactor the code
-- [ ] Don't rely on swaymsg, make universal
-    - [x] Now using swayipc
-    - [ ] Make it work on other than sway?
-- [x] Whitelist/blacklist
-- [ ] Make the overlay a compile time feature
-- [ ] Fork kanata and apply the logging patches
+## How it works
 
-## How it works ⚙️
-1. You have a `main` layer, this will be used by default.
-2. You have a `~/.config/keyboard/apps/org.telegram.desktop` layer.
-    When `telegram` is focused it sends the window name (`org.telegram.desktop` in this case) to kanata.
-    Kanata switches to this layer.
-NOTE: If it can't find the corresponding file in `/apps` it fallbacks to the default layer (`main`)
+1. `main` is the default layer.
+2. If the focused application matches a file in `~/.config/keyboard/apps/`, qanata switches to that layer.
+3. If no matching file exists, qanata falls back to `main`.
 
-- Create a file and include it in your kanata configuration
-    - NOTE: The name of the file should match what sway returns
+Example:
 
-## Check out my [kanata config](https://github.com/veyxov/dots/tree/main/keyboard/.config/keyboard) for reference 💡
+```text
+~/.config/keyboard/apps/org.telegram.desktop
+```
 
-# Development
-## Using Cargo
-Dependencies:
-- SDL2 for the overlay window, optional (todo)
+If Telegram is focused, qanata sends `org.telegram.desktop` to kanata and kanata switches to that layer.
+
+## Run
 
 ```sh
-git clone https://github.com/veyxov/qanata
-cd qanata/
 cargo run -- --port 7070
 ```
 
-## Using Nix
-You can use the provided [`flake.nix`](./flake.nix) to setup all build- and run-time dependencies:
+Useful flags:
+
+- `--debug` for debug logs
+- `--trace` for trace logs
+- `--white-list-file <path>` to ignore apps that should not trigger layer changes
+
+## Overlay
+
+The overlay window is optional and controlled by the `overlay` feature:
+
+```sh
+cargo run --features overlay -- --port 7070
+```
+
+## Nix development shell
+
+This repository includes a [`flake.nix`](./flake.nix) for development dependencies.
 
 1. Enable [Flakes](https://wiki.nixos.org/wiki/Flakes) in your Nix configuration.
-1. Add [`direnv`](https://direnv.net/) to your profile:
-   `nix profile install nixpkgs#direnv`
-1. `cd` into the directory where you have cloned this directory.
-1. Allow use of [`.envrc`](./.envrc): `direnv allow`
-1. After the dependencies have been installed, your shell will now have all of the necessary development dependencies.
+2. Install [direnv](https://direnv.net/), for example with `nix profile install nixpkgs#direnv`.
+3. Clone the repository and enter it.
+4. Allow the environment with `direnv allow`.
 
-# Visualize statistics generated from kanata
-#### python script for generating heatmap for key presses
-### How to run:
+After that, the shell provides the build and runtime dependencies used by the project.
+
+## Statistics
+
+The repository also includes a small script for visualizing kanata logs:
+
 ```sh
 ./run_stats.sh --file path/to/kanata/log
-
-# Current format: actual_key_presses|layer|resulting_key_press
 ```
----
 
-## Bugs 🐞
-- [x] ~~Panics if there are no windows in current workspace (when the wallpaper is visible)~~
-- [x] Overheats the CPU when sway is locked; Fixed in [commit](https://github.com/veyxov/qanata/commit/e8ae9d1e51606bab5a3d8a57bb97eab2cb01de1b)
+Log format:
 
-# Caution: This is very experimental and raw. Needs a lot of work to make usable
+```text
+actual_key_presses|layer|resulting_key_press
+```
+
+## Reference
+
+For a real configuration example, see my [kanata config](https://github.com/veyxov/dots/tree/main/keyboard/.config/keyboard).
+
+## Status
+
+This project is still experimental. It works, but it is not polished yet.
