@@ -7,8 +7,8 @@ use std::{str, thread};
 use std::net::TcpStream;
 use std::time::Duration;
 
+use crate::app_init::RuntimeConfig;
 use crate::sway_ipc_connection::Sway;
-use crate::whitelist::get_white_list;
 
 mod app_init;
 mod kanata_io;
@@ -18,7 +18,7 @@ mod sway_ipc_connection;
 pub mod whitelist;
 
 fn main() {
-    let (kanata_conn, sway_conn) = app_init::init();
+    let (config, kanata_conn, sway_conn) = app_init::init();
 
     match kanata_conn {
         Ok(kanata) => {
@@ -46,7 +46,7 @@ fn main() {
                     thread::spawn(|| overlay::overlay::render_ovrelay(rx1));
 
                     let rx2 = receiver.clone();
-                    main_loop(writer_stream, sway, rx2, sx2);
+                    main_loop(writer_stream, sway, rx2, sx2, config);
                 }
                 Err(e) => {
                     log::error!("Cannot connect to sway: {}", e);
@@ -74,6 +74,7 @@ fn main_loop(
     mut sway: Sway,
     receiver: Arc<Mutex<Receiver<String>>>,
     sender: Arc<Mutex<Sender<String>>>,
+    config: RuntimeConfig,
 ) {
     let mut cur_layer = String::from("main");
 
@@ -113,7 +114,7 @@ fn main_loop(
         log::trace!("Current layer: {}", cur_layer);
 
         // Don't change layer if not in a whitelisted file
-        if let Some(whitelist) = get_white_list() {
+        if let Some(whitelist) = &config.white_list {
             if !whitelist.contains(&cur_layer) {
                 wait = true;
                 log::warn!("Skipping {} because not in whitelist", &cur_layer);

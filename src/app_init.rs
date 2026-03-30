@@ -10,6 +10,11 @@ use std::{
     time::Duration,
 };
 
+#[derive(Debug, Clone)]
+pub struct RuntimeConfig {
+    pub white_list: Option<Vec<String>>,
+}
+
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 pub struct Args {
@@ -78,9 +83,20 @@ fn configure_logger() -> Args {
     args
 }
 
-pub(crate) fn init() -> (anyhow::Result<TcpStream>, anyhow::Result<Sway>) {
+fn build_config(args: &Args) -> RuntimeConfig {
+    RuntimeConfig {
+        white_list: crate::whitelist::get_white_list(args.white_list_file.as_deref()),
+    }
+}
+
+pub(crate) fn init() -> (
+    RuntimeConfig,
+    anyhow::Result<TcpStream>,
+    anyhow::Result<Sway>,
+) {
     let args = configure_logger();
+    let config = build_config(&args);
     let kanata_conn = connect_to_kanata(args);
     let sway_connection = connect_to_sway();
-    (kanata_conn, sway_connection)
+    (config, kanata_conn, sway_connection)
 }
